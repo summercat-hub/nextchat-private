@@ -567,6 +567,13 @@
       margin-bottom: 10px;
     }
   }
+
+  > .chat-input-actions {
+    > .chat-input-action:nth-of-type(n + 4),
+    > .chat-input-actions-end {
+      display: none;
+    }
+  }
 }
 
 @mixin single-line {
