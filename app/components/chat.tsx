@@ -598,29 +598,7 @@ export function ChatActions(props: {
 
   return (
     <div className={styles["chat-input-actions"]}>
-      <>
-        {couldStop && (
-          <ChatAction
-            onClick={stopAll}
-            text={Locale.Chat.InputActions.Stop}
-            icon={<StopIcon />}
-          />
-        )}
-        {!props.hitBottom && (
-          <ChatAction
-            onClick={props.scrollToBottom}
-            text={Locale.Chat.InputActions.ToBottom}
-            icon={<BottomIcon />}
-          />
-        )}
-        {props.hitBottom && (
-          <ChatAction
-            onClick={props.showPromptModal}
-            text={Locale.Chat.InputActions.Settings}
-            icon={<SettingsIcon />}
-          />
-        )}
-
+      <div className={styles["chat-input-actions-primary"]}>
         {showUploadImage && (
           <ChatAction
             onClick={props.uploadImage}
@@ -643,6 +621,29 @@ export function ChatActions(props: {
             </>
           }
         />
+      </div>
+      <>
+        {couldStop && (
+          <ChatAction
+            onClick={stopAll}
+            text={Locale.Chat.InputActions.Stop}
+            icon={<StopIcon />}
+          />
+        )}
+        {!props.hitBottom && (
+          <ChatAction
+            onClick={props.scrollToBottom}
+            text={Locale.Chat.InputActions.ToBottom}
+            icon={<BottomIcon />}
+          />
+        )}
+        {props.hitBottom && (
+          <ChatAction
+            onClick={props.showPromptModal}
+            text={Locale.Chat.InputActions.Settings}
+            icon={<SettingsIcon />}
+          />
+        )}
 
         <ChatAction
           onClick={props.showPromptHints}
