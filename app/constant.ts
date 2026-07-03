@@ -176,12 +176,12 @@ export const Anthropic = {
 };
 
 export const OpenaiPath = {
-  ChatPath: "v1/chat/completions",
+  ChatPath: "v1/openai/chat/completions",
   SpeechPath: "v1/audio/speech",
   ImagePath: "v1/images/generations",
   UsagePath: "dashboard/billing/usage",
   SubsPath: "dashboard/billing/subscription",
-  ListModelPath: "v1/models",
+  ListModelPath: "v1/openai/models",
 };
 
 export const Azure = {
@@ -240,12 +240,12 @@ export const Tencent = {
 
 export const Moonshot = {
   ExampleEndpoint: MOONSHOT_BASE_URL,
-  ChatPath: "v1/chat/completions",
+  ChatPath: "v1/openai/chat/completions",
 };
 
 export const Iflytek = {
   ExampleEndpoint: IFLYTEK_BASE_URL,
-  ChatPath: "v1/chat/completions",
+  ChatPath: "v1/openai/chat/completions",
 };
 
 export const DeepSeek = {
@@ -255,7 +255,7 @@ export const DeepSeek = {
 
 export const XAI = {
   ExampleEndpoint: XAI_BASE_URL,
-  ChatPath: "v1/chat/completions",
+  ChatPath: "v1/openai/chat/completions",
 };
 
 export const ChatGLM = {
@@ -267,13 +267,13 @@ export const ChatGLM = {
 
 export const SiliconFlow = {
   ExampleEndpoint: SILICONFLOW_BASE_URL,
-  ChatPath: "v1/chat/completions",
+  ChatPath: "v1/openai/chat/completions",
   ListModelPath: "v1/models?&sub_type=chat",
 };
 
 export const AI302 = {
   ExampleEndpoint: AI302_BASE_URL,
-  ChatPath: "v1/chat/completions",
+  ChatPath: "v1/openai/chat/completions",
   EmbeddingsPath: "jina/v1/embeddings",
   ListModelPath: "v1/models?llm=1",
 };
