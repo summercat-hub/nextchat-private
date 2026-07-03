@@ -569,9 +569,17 @@
   }
 
   > .chat-input-actions {
-    > .chat-input-action:nth-of-type(n + 4),
+    justify-content: center;
+
+    > .chat-input-action,
     > .chat-input-actions-end {
       display: none;
+    }
+
+    > .chat-input-actions-primary {
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
   }
 }
