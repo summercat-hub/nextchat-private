@@ -3,14 +3,8 @@ import { useState, useEffect, useMemo } from "react";
 import styles from "./settings.module.scss";
 
 import ResetIcon from "../icons/reload.svg";
-import AddIcon from "../icons/add.svg";
 import CloseIcon from "../icons/close.svg";
-import CopyIcon from "../icons/copy.svg";
-import ClearIcon from "../icons/clear.svg";
 import LoadingIcon from "../icons/three-dots.svg";
-import EditIcon from "../icons/edit.svg";
-import FireIcon from "../icons/fire.svg";
-import EyeIcon from "../icons/eye.svg";
 import DownloadIcon from "../icons/download.svg";
 import UploadIcon from "../icons/upload.svg";
 import ConfigIcon from "../icons/config.svg";
@@ -19,9 +13,7 @@ import ConfirmIcon from "../icons/confirm.svg";
 import ConnectionIcon from "../icons/connection.svg";
 import CloudSuccessIcon from "../icons/cloud-success.svg";
 import CloudFailIcon from "../icons/cloud-fail.svg";
-import { trackSettingsPageGuideToCPaymentClick } from "../utils/auth-settings-events";
 import {
-  Input,
   List,
   ListItem,
   Modal,
@@ -31,7 +23,6 @@ import {
   showConfirm,
   showToast,
 } from "./ui-lib";
-import { ModelConfigList } from "./model-config";
 
 import { IconButton } from "./button";
 import {
@@ -49,7 +40,7 @@ import Locale, {
   changeLang,
   getLang,
 } from "../locales";
-import { copyToClipboard, clientUpdate, semverCompare } from "../utils";
+import { clientUpdate, semverCompare } from "../utils";
 import Link from "next/link";
 import {
   Anthropic,
@@ -71,178 +62,21 @@ import {
   UPDATE_URL,
   Stability,
   Iflytek,
-  SAAS_CHAT_URL,
   ChatGLM,
   DeepSeek,
   SiliconFlow,
   AI302,
 } from "../constant";
-import { Prompt, SearchService, usePromptStore } from "../store/prompt";
+import { usePromptStore } from "../store/prompt";
 import { ErrorBoundary } from "./error";
 import { InputRange } from "./input-range";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarPicker } from "./emoji";
 import { getClientConfig } from "../config/client";
 import { useSyncStore } from "../store/sync";
-import { nanoid } from "nanoid";
 import { useMaskStore } from "../store/mask";
 import { ProviderType } from "../utils/cloud";
-import { TTSConfigList } from "./tts-config";
 import { RealtimeConfigList } from "./realtime-chat/realtime-config";
-
-function EditPromptModal(props: { id: string; onClose: () => void }) {
-  const promptStore = usePromptStore();
-  const prompt = promptStore.get(props.id);
-
-  return prompt ? (
-    <div className="modal-mask">
-      <Modal
-        title={Locale.Settings.Prompt.EditModal.Title}
-        onClose={props.onClose}
-        actions={[
-          <IconButton
-            key=""
-            onClick={props.onClose}
-            text={Locale.UI.Confirm}
-            bordered
-          />,
-        ]}
-      >
-        <div className={styles["edit-prompt-modal"]}>
-          <input
-            type="text"
-            value={prompt.title}
-            readOnly={!prompt.isUser}
-            className={styles["edit-prompt-title"]}
-            onInput={(e) =>
-              promptStore.updatePrompt(
-                props.id,
-                (prompt) => (prompt.title = e.currentTarget.value),
-              )
-            }
-          ></input>
-          <Input
-            value={prompt.content}
-            readOnly={!prompt.isUser}
-            className={styles["edit-prompt-content"]}
-            rows={10}
-            onInput={(e) =>
-              promptStore.updatePrompt(
-                props.id,
-                (prompt) => (prompt.content = e.currentTarget.value),
-              )
-            }
-          ></Input>
-        </div>
-      </Modal>
-    </div>
-  ) : null;
-}
-
-function UserPromptModal(props: { onClose?: () => void }) {
-  const promptStore = usePromptStore();
-  const userPrompts = promptStore.getUserPrompts();
-  const builtinPrompts = SearchService.builtinPrompts;
-  const allPrompts = userPrompts.concat(builtinPrompts);
-  const [searchInput, setSearchInput] = useState("");
-  const [searchPrompts, setSearchPrompts] = useState<Prompt[]>([]);
-  const prompts = searchInput.length > 0 ? searchPrompts : allPrompts;
-
-  const [editingPromptId, setEditingPromptId] = useState<string>();
-
-  useEffect(() => {
-    if (searchInput.length > 0) {
-      const searchResult = SearchService.search(searchInput);
-      setSearchPrompts(searchResult);
-    } else {
-      setSearchPrompts([]);
-    }
-  }, [searchInput]);
-
-  return (
-    <div className="modal-mask">
-      <Modal
-        title={Locale.Settings.Prompt.Modal.Title}
-        onClose={() => props.onClose?.()}
-        actions={[
-          <IconButton
-            key="add"
-            onClick={() => {
-              const promptId = promptStore.add({
-                id: nanoid(),
-                createdAt: Date.now(),
-                title: "Empty Prompt",
-                content: "Empty Prompt Content",
-              });
-              setEditingPromptId(promptId);
-            }}
-            icon={<AddIcon />}
-            bordered
-            text={Locale.Settings.Prompt.Modal.Add}
-          />,
-        ]}
-      >
-        <div className={styles["user-prompt-modal"]}>
-          <input
-            type="text"
-            className={styles["user-prompt-search"]}
-            placeholder={Locale.Settings.Prompt.Modal.Search}
-            value={searchInput}
-            onInput={(e) => setSearchInput(e.currentTarget.value)}
-          ></input>
-
-          <div className={styles["user-prompt-list"]}>
-            {prompts.map((v, _) => (
-              <div className={styles["user-prompt-item"]} key={v.id ?? v.title}>
-                <div className={styles["user-prompt-header"]}>
-                  <div className={styles["user-prompt-title"]}>{v.title}</div>
-                  <div className={styles["user-prompt-content"] + " one-line"}>
-                    {v.content}
-                  </div>
-                </div>
-
-                <div className={styles["user-prompt-buttons"]}>
-                  {v.isUser && (
-                    <IconButton
-                      icon={<ClearIcon />}
-                      className={styles["user-prompt-button"]}
-                      onClick={() => promptStore.remove(v.id!)}
-                    />
-                  )}
-                  {v.isUser ? (
-                    <IconButton
-                      icon={<EditIcon />}
-                      className={styles["user-prompt-button"]}
-                      onClick={() => setEditingPromptId(v.id)}
-                    />
-                  ) : (
-                    <IconButton
-                      icon={<EyeIcon />}
-                      className={styles["user-prompt-button"]}
-                      onClick={() => setEditingPromptId(v.id)}
-                    />
-                  )}
-                  <IconButton
-                    icon={<CopyIcon />}
-                    className={styles["user-prompt-button"]}
-                    onClick={() => copyToClipboard(v.content)}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Modal>
-
-      {editingPromptId !== undefined && (
-        <EditPromptModal
-          id={editingPromptId!}
-          onClose={() => setEditingPromptId(undefined)}
-        />
-      )}
-    </div>
-  );
-}
 
 function DangerItems() {
   const chatStore = useChatStore();
@@ -641,11 +475,6 @@ export function Settings() {
     [],
   );
 
-  const promptStore = usePromptStore();
-  const builtinCount = SearchService.count.builtin;
-  const customCount = promptStore.getUserPrompts().length ?? 0;
-  const [shouldShowPromptModal, setShowPromptModal] = useState(false);
-
   const showUsage = accessStore.isAuthorized();
   useEffect(() => {
     // checks per minutes
@@ -689,31 +518,6 @@ export function Settings() {
           accessStore.update(
             (access) => (access.accessCode = e.currentTarget.value),
           );
-        }}
-      />
-    </ListItem>
-  );
-
-  const saasStartComponent = (
-    <ListItem
-      className={styles["subtitle-button"]}
-      title={
-        Locale.Settings.Access.SaasStart.Title +
-        `${Locale.Settings.Access.SaasStart.Label}`
-      }
-      subTitle={Locale.Settings.Access.SaasStart.SubTitle}
-    >
-      <IconButton
-        aria={
-          Locale.Settings.Access.SaasStart.Title +
-          Locale.Settings.Access.SaasStart.ChatNow
-        }
-        icon={<FireIcon />}
-        type={"primary"}
-        text={Locale.Settings.Access.SaasStart.ChatNow}
-        onClick={() => {
-          trackSettingsPageGuideToCPaymentClick();
-          window.location.href = SAAS_CHAT_URL;
         }}
       />
     </ListItem>
@@ -1744,79 +1548,7 @@ export function Settings() {
 
         <SyncItems />
 
-        <List>
-          <ListItem
-            title={Locale.Settings.Mask.Splash.Title}
-            subTitle={Locale.Settings.Mask.Splash.SubTitle}
-          >
-            <input
-              aria-label={Locale.Settings.Mask.Splash.Title}
-              type="checkbox"
-              checked={!config.dontShowMaskSplashScreen}
-              onChange={(e) =>
-                updateConfig(
-                  (config) =>
-                    (config.dontShowMaskSplashScreen =
-                      !e.currentTarget.checked),
-                )
-              }
-            ></input>
-          </ListItem>
-
-          <ListItem
-            title={Locale.Settings.Mask.Builtin.Title}
-            subTitle={Locale.Settings.Mask.Builtin.SubTitle}
-          >
-            <input
-              aria-label={Locale.Settings.Mask.Builtin.Title}
-              type="checkbox"
-              checked={config.hideBuiltinMasks}
-              onChange={(e) =>
-                updateConfig(
-                  (config) =>
-                    (config.hideBuiltinMasks = e.currentTarget.checked),
-                )
-              }
-            ></input>
-          </ListItem>
-        </List>
-
-        <List>
-          <ListItem
-            title={Locale.Settings.Prompt.Disable.Title}
-            subTitle={Locale.Settings.Prompt.Disable.SubTitle}
-          >
-            <input
-              aria-label={Locale.Settings.Prompt.Disable.Title}
-              type="checkbox"
-              checked={config.disablePromptHint}
-              onChange={(e) =>
-                updateConfig(
-                  (config) =>
-                    (config.disablePromptHint = e.currentTarget.checked),
-                )
-              }
-            ></input>
-          </ListItem>
-
-          <ListItem
-            title={Locale.Settings.Prompt.List}
-            subTitle={Locale.Settings.Prompt.ListCount(
-              builtinCount,
-              customCount,
-            )}
-          >
-            <IconButton
-              aria={Locale.Settings.Prompt.List + Locale.Settings.Prompt.Edit}
-              icon={<EditIcon />}
-              text={Locale.Settings.Prompt.Edit}
-              onClick={() => setShowPromptModal(true)}
-            />
-          </ListItem>
-        </List>
-
         <List id={SlotID.CustomModel}>
-          {saasStartComponent}
           {accessCodeComponent}
 
           {!accessStore.hideUserApiKey && (
@@ -1916,20 +1648,6 @@ export function Settings() {
         </List>
 
         <List>
-          <ModelConfigList
-            modelConfig={config.modelConfig}
-            updateConfig={(updater) => {
-              const modelConfig = { ...config.modelConfig };
-              updater(modelConfig);
-              config.update((config) => (config.modelConfig = modelConfig));
-            }}
-          />
-        </List>
-
-        {shouldShowPromptModal && (
-          <UserPromptModal onClose={() => setShowPromptModal(false)} />
-        )}
-        <List>
           <RealtimeConfigList
             realtimeConfig={config.realtimeConfig}
             updateConfig={(updater) => {
@@ -1941,17 +1659,6 @@ export function Settings() {
             }}
           />
         </List>
-        <List>
-          <TTSConfigList
-            ttsConfig={config.ttsConfig}
-            updateConfig={(updater) => {
-              const ttsConfig = { ...config.ttsConfig };
-              updater(ttsConfig);
-              config.update((config) => (config.ttsConfig = ttsConfig));
-            }}
-          />
-        </List>
-
         <DangerItems />
       </div>
     </ErrorBoundary>
