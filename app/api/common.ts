@@ -16,6 +16,8 @@ type OpenAIChatMessage = {
 type OpenAIChatBody = {
   model?: string;
   messages?: OpenAIChatMessage[];
+  max_tokens?: number;
+  max_completion_tokens?: number;
 };
 
 type TavilySearchResult = {
@@ -88,11 +90,15 @@ async function injectTavilySearchContext(body: OpenAIChatBody, apiKey: string) {
     {
       role: "system",
       content:
-        "Web search is enabled for this turn. Use the following Tavily search results as external context when they are relevant. Prefer the search results for current facts, prices, dates, availability, news, and time-sensitive claims. If the results are insufficient, say so clearly. When using the results, include a short '参考来源' section with the source URLs.\n\n" +
+        "Web search has already been completed by the server for this turn. Do not say that you are searching, browsing, waiting for search results, or using live tools now. Use the following Tavily search results as external context when they are relevant. Prefer the search results for current facts, prices, dates, availability, news, and time-sensitive claims. Answer directly in the user's language. Do not output hidden reasoning, chain-of-thought, or <think> tags. If the results are insufficient, say so clearly. When using the results, include a short '参考来源' section with the source URLs.\n\n" +
         searchContext,
     },
     ...(body.messages ?? []),
   ];
+
+  if (typeof body.max_completion_tokens !== "number") {
+    body.max_tokens = Math.max(body.max_tokens ?? 0, 4096);
+  }
 
   return body;
 }

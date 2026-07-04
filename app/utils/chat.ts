@@ -601,19 +601,23 @@ export function streamWithThink(
 
           // deal with <think> and </think> tags start
           if (!chunk.isThinking) {
-            if (chunk.content.startsWith("<think>")) {
+            const startsWithThink = chunk.content.startsWith("<think>");
+            const endsWithThink = chunk.content.endsWith("</think>");
+
+            if (startsWithThink) {
               chunk.isThinking = true;
               chunk.content = chunk.content.slice(7).trim();
-              lastIsThinkingTagged = true;
-            } else if (chunk.content.endsWith("</think>")) {
-              chunk.isThinking = false;
+              lastIsThinkingTagged = !endsWithThink;
+            }
+
+            if (endsWithThink) {
               chunk.content = chunk.content.slice(0, -8).trim();
               lastIsThinkingTagged = false;
-            } else if (lastIsThinkingTagged) {
+            } else if (!startsWithThink && lastIsThinkingTagged) {
               chunk.isThinking = true;
             }
           }
-          // deal with <think> and </think> tags start
+          // deal with <think> and </think> tags end
 
           // Check if thinking mode changed
           const isThinkingChanged = lastIsThinking !== chunk.isThinking;
