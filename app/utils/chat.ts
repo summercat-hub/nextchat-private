@@ -419,6 +419,48 @@ export function streamWithThink(
   let isInThinkingMode = false;
   let lastIsThinking = false;
   let lastIsThinkingTagged = false; //between <think> and </think> tags
+  let hiddenThinkingText = "";
+
+  function stripTaggedThinkingContent(content: string) {
+    let visibleContent = "";
+    let restContent = content;
+
+    while (restContent.length > 0) {
+      if (lastIsThinkingTagged) {
+        const endIndex = restContent.indexOf("</think>");
+        if (endIndex < 0) {
+          hiddenThinkingText += restContent;
+          return visibleContent;
+        }
+
+        hiddenThinkingText += restContent.slice(0, endIndex);
+        restContent = restContent.slice(endIndex + "</think>".length);
+        lastIsThinkingTagged = false;
+        continue;
+      }
+
+      const startIndex = restContent.indexOf("<think>");
+      if (startIndex < 0) {
+        visibleContent += restContent;
+        break;
+      }
+
+      visibleContent += restContent.slice(0, startIndex);
+      restContent = restContent.slice(startIndex + "<think>".length);
+
+      const endIndex = restContent.indexOf("</think>");
+      if (endIndex < 0) {
+        hiddenThinkingText += restContent;
+        lastIsThinkingTagged = true;
+        break;
+      }
+
+      hiddenThinkingText += restContent.slice(0, endIndex);
+      restContent = restContent.slice(endIndex + "</think>".length);
+    }
+
+    return visibleContent;
+  }
 
   // animate response to make it looks smooth
   function animateResponseText() {
@@ -516,6 +558,9 @@ export function streamWithThink(
         return;
       }
       console.debug("[ChatAPI] end");
+      if ((responseText + remainText).length === 0 && hiddenThinkingText.trim()) {
+        remainText = "模型这次只返回了思考过程，没有返回最终答案。请重新发送一次。";
+      }
       finished = true;
       options.onFinish(responseText + remainText, responseRes);
     }
@@ -599,41 +644,28 @@ export function streamWithThink(
             return;
           }
 
-          // deal with <think> and </think> tags start
-          if (!chunk.isThinking) {
-            const startsWithThink = chunk.content.startsWith("<think>");
-            const endsWithThink = chunk.content.endsWith("</think>");
-
-            if (startsWithThink) {
-              chunk.isThinking = true;
-              chunk.content = chunk.content.slice(7).trim();
-              lastIsThinkingTagged = !endsWithThink;
-            }
-
-            if (endsWithThink) {
-              chunk.content = chunk.content.slice(0, -8).trim();
-              lastIsThinkingTagged = false;
-            } else if (!startsWithThink && lastIsThinkingTagged) {
-              chunk.isThinking = true;
-            }
-          }
-          // deal with <think> and </think> tags end
-
-          // Check if thinking mode changed
-          const isThinkingChanged = lastIsThinking !== chunk.isThinking;
-          lastIsThinking = chunk.isThinking;
-
           if (chunk.isThinking) {
+            hiddenThinkingText += chunk.content;
             isInThinkingMode = true;
+            lastIsThinking = true;
             return;
           }
 
-          // If in normal mode
-          if (isInThinkingMode || isThinkingChanged) {
-            // If switching from thinking mode to normal mode
-            isInThinkingMode = false;
+          const wasThinking = isInThinkingMode || lastIsThinking;
+          chunk.content = stripTaggedThinkingContent(chunk.content);
+          lastIsThinking = lastIsThinkingTagged;
+
+          if (!chunk.content || chunk.content.length === 0) {
+            if (lastIsThinkingTagged) {
+              isInThinkingMode = true;
+            }
+            return;
+          }
+
+          isInThinkingMode = false;
+          if (wasThinking) {
             const hasVisibleText = responseText.length > 0 || remainText.length > 0;
-            remainText += (hasVisibleText ? "\n\n" : "") + chunk.content;
+            remainText += (hasVisibleText ? "\n\n" : "") + chunk.content.trimStart();
           } else {
             remainText += chunk.content;
           }
