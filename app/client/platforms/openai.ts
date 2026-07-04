@@ -270,6 +270,10 @@ export class ChatGPTApi implements LLMApi {
     const shouldStream = !isDalle3 && !!options.config.stream;
     const controller = new AbortController();
     options.onController?.(controller);
+    const requestHeaders = {
+      ...getHeaders(),
+      ...(options.enableWebSearch ? { "x-nextchat-web-search": "1" } : {}),
+    };
 
     try {
       let chatPath = "";
@@ -314,7 +318,7 @@ export class ChatGPTApi implements LLMApi {
         streamWithThink(
           chatPath,
           requestPayload,
-          getHeaders(),
+          requestHeaders,
           tools as any,
           funcs,
           controller,
@@ -407,7 +411,7 @@ export class ChatGPTApi implements LLMApi {
           method: "POST",
           body: JSON.stringify(requestPayload),
           signal: controller.signal,
-          headers: getHeaders(),
+          headers: requestHeaders,
         };
 
         // make a fetch request

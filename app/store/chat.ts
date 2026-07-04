@@ -461,6 +461,7 @@ export const useChatStore = createPersistStore(
         api.llm.chat({
           messages: sendMessages,
           config: { ...modelConfig, stream: true },
+          enableWebSearch: useAppConfig.getState().enableWebSearch,
           onUpdate(message) {
             botMessage.streaming = true;
             if (message) {

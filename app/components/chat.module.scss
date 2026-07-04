@@ -96,7 +96,16 @@
       display: flex;
       align-items: center;
       justify-content: center;
+
+      svg path[style*="fill:#333"] {
+        fill: currentColor !important;
+      }
     }
+  }
+
+  .chat-input-action-active {
+    color: var(--primary);
+    border-color: var(--primary);
   }
 }
 

@@ -83,6 +83,7 @@ export interface ChatOptions {
   onController?: (controller: AbortController) => void;
   onBeforeTool?: (tool: ChatMessageTool) => void;
   onAfterTool?: (tool: ChatMessageTool) => void;
+  enableWebSearch?: boolean;
 }
 
 export interface LLMUsage {

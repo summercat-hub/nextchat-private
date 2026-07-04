@@ -2,9 +2,100 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSideConfig } from "../config/server";
 import { OPENAI_BASE_URL, ServiceProvider } from "../constant";
 import { cloudflareAIGatewayUrl } from "../utils/cloudflare";
+import { prettyObject } from "../utils/format";
 import { getModelProvider, isModelNotavailableInServer } from "../utils/model";
 
 const serverConfig = getServerSideConfig();
+const WEB_SEARCH_HEADER = "x-nextchat-web-search";
+
+type OpenAIChatMessage = {
+  role: "developer" | "system" | "user" | "assistant";
+  content: string | Array<{ type?: string; text?: string }>;
+};
+
+type OpenAIChatBody = {
+  model?: string;
+  messages?: OpenAIChatMessage[];
+};
+
+type TavilySearchResult = {
+  title?: string;
+  url?: string;
+  content?: string;
+};
+
+function getContentText(content: OpenAIChatMessage["content"]) {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+
+  return content
+    .map((item) => (item.type === "text" ? item.text ?? "" : ""))
+    .join("\n")
+    .trim();
+}
+
+function getLastUserQuery(body: OpenAIChatBody) {
+  const lastUserMessage = [...(body.messages ?? [])]
+    .reverse()
+    .find((message) => message.role === "user");
+
+  return lastUserMessage ? getContentText(lastUserMessage.content).trim() : "";
+}
+
+function formatSearchContext(results: TavilySearchResult[]) {
+  if (results.length === 0) {
+    return "Tavily search returned no useful results for this query.";
+  }
+
+  return results
+    .map((result, index) => {
+      const title = result.title || "Untitled";
+      const url = result.url || "";
+      const content = result.content || "";
+      return `[${index + 1}] ${title}\nURL: ${url}\nSnippet: ${content}`;
+    })
+    .join("\n\n");
+}
+
+async function injectTavilySearchContext(body: OpenAIChatBody, apiKey: string) {
+  const query = getLastUserQuery(body);
+  if (!query) return body;
+
+  const response = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      query,
+      search_depth: "basic",
+      max_results: 5,
+      include_answer: false,
+      include_raw_content: false,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Tavily search failed: ${response.status} ${errorText}`);
+  }
+
+  const data = (await response.json()) as { results?: TavilySearchResult[] };
+  const searchContext = formatSearchContext((data.results ?? []).slice(0, 5));
+
+  body.messages = [
+    {
+      role: "system",
+      content:
+        "Web search is enabled for this turn. Use the following Tavily search results as external context when they are relevant. Prefer the search results for current facts, prices, dates, availability, news, and time-sensitive claims. If the results are insufficient, say so clearly. When using the results, include a short '参考来源' section with the source URLs.\n\n" +
+        searchContext,
+    },
+    ...(body.messages ?? []),
+  ];
+
+  return body;
+}
 
 export async function requestOpenai(req: NextRequest) {
   const controller = new AbortController();
@@ -90,6 +181,12 @@ export async function requestOpenai(req: NextRequest) {
 
   const fetchUrl = cloudflareAIGatewayUrl(`${baseUrl}/${path}`);
   console.log("fetchUrl", fetchUrl);
+
+  let requestBodyText: string | undefined;
+  if (req.body) {
+    requestBodyText = await req.text();
+  }
+
   const fetchOptions: RequestInit = {
     headers: {
       "Content-Type": "application/json",
@@ -100,7 +197,7 @@ export async function requestOpenai(req: NextRequest) {
       }),
     },
     method: req.method,
-    body: req.body,
+    body: requestBodyText,
     // to fix #2485: https://stackoverflow.com/questions/55920957/cloudflare-worker-typeerror-one-time-use-body
     redirect: "manual",
     // @ts-ignore
@@ -108,13 +205,46 @@ export async function requestOpenai(req: NextRequest) {
     signal: controller.signal,
   };
 
-  // #1815 try to refuse gpt4 request
-  if (serverConfig.customModels && req.body) {
-    try {
-      const clonedBody = await req.text();
-      fetchOptions.body = clonedBody;
+  const shouldUseWebSearch =
+    req.headers.get(WEB_SEARCH_HEADER) === "1" &&
+    req.method === "POST" &&
+    path.endsWith("chat/completions");
 
-      const jsonBody = JSON.parse(clonedBody) as { model?: string };
+  if (shouldUseWebSearch && requestBodyText) {
+    if (!serverConfig.tavilyApiKey) {
+      return NextResponse.json(
+        {
+          error: true,
+          message: "TAVILY_API_KEY is not configured.",
+        },
+        { status: 400 },
+      );
+    }
+
+    try {
+      const jsonBody = JSON.parse(requestBodyText) as OpenAIChatBody;
+      const bodyWithSearch = await injectTavilySearchContext(
+        jsonBody,
+        serverConfig.tavilyApiKey,
+      );
+      requestBodyText = JSON.stringify(bodyWithSearch);
+      fetchOptions.body = requestBodyText;
+    } catch (e) {
+      console.error("[Tavily Search]", e);
+      return NextResponse.json(
+        {
+          error: true,
+          message: prettyObject(e),
+        },
+        { status: 500 },
+      );
+    }
+  }
+
+  // #1815 try to refuse gpt4 request
+  if (serverConfig.customModels && requestBodyText) {
+    try {
+      const jsonBody = JSON.parse(requestBodyText) as { model?: string };
 
       // not undefined and is false
       if (

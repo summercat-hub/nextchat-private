@@ -96,6 +96,9 @@ declare global {
       DEFAULT_INPUT_TEMPLATE?: string;
 
       ENABLE_MCP?: string; // enable mcp functionality
+
+      // Tavily search integration
+      TAVILY_API_KEY?: string;
     }
   }
 }
@@ -254,6 +257,8 @@ export const getServerSideConfig = () => {
     isAI302,
     ai302Url: process.env.AI302_URL,
     ai302ApiKey: getApiKey(process.env.AI302_API_KEY),
+
+    tavilyApiKey: getApiKey(process.env.TAVILY_API_KEY),
 
     gtmId: process.env.GTM_ID,
     gaId: process.env.GA_ID || DEFAULT_GA_ID,

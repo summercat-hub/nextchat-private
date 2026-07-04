@@ -34,6 +34,7 @@ import ConfirmIcon from "../icons/confirm.svg";
 import CloseIcon from "../icons/close.svg";
 import CancelIcon from "../icons/cancel.svg";
 import ImageIcon from "../icons/image.svg";
+import ConnectionIcon from "../icons/connection.svg";
 
 import LightIcon from "../icons/light.svg";
 import DarkIcon from "../icons/dark.svg";
@@ -405,6 +406,7 @@ export function ChatAction(props: {
   text: string;
   icon: JSX.Element;
   onClick: () => void;
+  active?: boolean;
 }) {
   const iconRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
@@ -426,7 +428,11 @@ export function ChatAction(props: {
 
   return (
     <div
-      className={clsx(styles["chat-input-action"], "clickable")}
+      className={clsx(
+        styles["chat-input-action"],
+        props.active && styles["chat-input-action-active"],
+        "clickable",
+      )}
       onClick={() => {
         props.onClick();
         setTimeout(updateWidth, 1);
@@ -570,7 +576,7 @@ export function ChatActions(props: {
   const isMobileScreen = useMobileScreen();
 
   useEffect(() => {
-    const show = isVisionModel(currentModel);
+    const show = isVisionModel(currentModel) || /gemini-3\./i.test(currentModel);
     setShowUploadImage(show);
     if (!show) {
       props.setAttachImages([]);
@@ -599,6 +605,20 @@ export function ChatActions(props: {
   return (
     <div className={styles["chat-input-actions"]}>
       <div className={styles["chat-input-actions-primary"]}>
+        <ChatAction
+          onClick={() => {
+            config.update(
+              (config) => (config.enableWebSearch = !config.enableWebSearch),
+            );
+          }}
+          text={
+            config.enableWebSearch
+              ? Locale.Chat.InputActions.WebSearchOn
+              : Locale.Chat.InputActions.WebSearchOff
+          }
+          icon={<ConnectionIcon />}
+          active={config.enableWebSearch}
+        />
         {showUploadImage && (
           <ChatAction
             onClick={props.uploadImage}
@@ -621,6 +641,11 @@ export function ChatActions(props: {
             </>
           }
         />
+        <ChatAction
+          onClick={props.showPromptModal}
+          text={Locale.Chat.InputActions.Settings}
+          icon={<SettingsIcon />}
+        />
       </div>
       <>
         {couldStop && (
@@ -637,14 +662,6 @@ export function ChatActions(props: {
             icon={<BottomIcon />}
           />
         )}
-        {props.hitBottom && (
-          <ChatAction
-            onClick={props.showPromptModal}
-            text={Locale.Chat.InputActions.Settings}
-            icon={<SettingsIcon />}
-          />
-        )}
-
         <ChatAction
           onClick={props.showPromptHints}
           text={Locale.Chat.InputActions.Prompt}
