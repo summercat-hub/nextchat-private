@@ -26,6 +26,91 @@ type TavilySearchResult = {
   content?: string;
 };
 
+type WebSearchDecision = {
+  shouldSearch: boolean;
+  reason: string;
+  query?: string;
+};
+
+const DIRECT_SEARCH_PATTERNS = [
+  /\b(search|google|browse|web search|look up|latest|current|source|citation|official site)\b/i,
+  /(搜索|搜一下|搜搜|查一下|查查|查询|检索|全网|网上|联网|互联网|官网|链接|网址|出处|来源|引用|小红书|推特|Twitter|Reddit|YouTube|GitHub)/i,
+];
+
+const CURRENT_INFO_PATTERNS = [
+  /(最新|最近|现在|当前|目前|截止目前|今天|昨天|本周|这个月|今年|实时|新闻|公告|发布|上架|下架|可用|不可用)/i,
+  /(价格|费用|收费|计费|多少钱|汇率|股价|天气|抽签|截止日期|排名|排行|榜单|政策|法规|规则|版本)/i,
+  /((Vercel|DeepInfra|Tavily|Gemini|ChatGPT|Codex|API|模型).{0,12}(价格|费用|收费|计费|最新|当前|现在|版本|可用|不可用|支持|发布|截止)|(价格|费用|收费|计费|最新|当前|现在|版本|可用|不可用|支持|发布|截止).{0,12}(Vercel|DeepInfra|Tavily|Gemini|ChatGPT|Codex|API|模型))/i,
+];
+
+const ALWAYS_SKIP_SEARCH_PATTERNS = [
+  /^(你好|您好|嗨|hi|hello|hey|在吗|早上好|晚上好|谢谢|感谢)[。.!！?？\s]*$/i,
+  /(不要搜索|不用搜索|别搜索|不要联网|不用联网|别联网|不用查|不要查)/i,
+];
+
+const LOCAL_TASK_PATTERNS = [
+  /(翻译|改写|润色|总结|摘要|扩写|缩写|仿写|写一篇|写一个|生成|起草|帮我写|分析这段|阅读以下|根据下面|代码|函数|报错|数学|计算)/i,
+];
+
+function matchesAnyPattern(text: string, patterns: RegExp[]) {
+  return patterns.some((pattern) => pattern.test(text));
+}
+
+function decideWebSearch(body: OpenAIChatBody): WebSearchDecision {
+  const query = getLastUserQuery(body);
+  const normalizedQuery = query.replace(/\s+/g, " ").trim();
+
+  if (!normalizedQuery) {
+    return { shouldSearch: false, reason: "empty user query" };
+  }
+
+  if (matchesAnyPattern(normalizedQuery, ALWAYS_SKIP_SEARCH_PATTERNS)) {
+    return {
+      shouldSearch: false,
+      reason: "query is conversational or explicitly says not to search",
+      query: normalizedQuery,
+    };
+  }
+
+  if (matchesAnyPattern(normalizedQuery, DIRECT_SEARCH_PATTERNS)) {
+    return {
+      shouldSearch: true,
+      reason: "query contains explicit search or source intent",
+      query: normalizedQuery,
+    };
+  }
+
+  if (/https?:\/\/|www\./i.test(normalizedQuery)) {
+    return {
+      shouldSearch: true,
+      reason: "query contains a web URL",
+      query: normalizedQuery,
+    };
+  }
+
+  if (matchesAnyPattern(normalizedQuery, LOCAL_TASK_PATTERNS)) {
+    return {
+      shouldSearch: false,
+      reason: "query can be handled locally without external information",
+      query: normalizedQuery,
+    };
+  }
+
+  if (matchesAnyPattern(normalizedQuery, CURRENT_INFO_PATTERNS)) {
+    return {
+      shouldSearch: true,
+      reason: "query appears to need current or changeable information",
+      query: normalizedQuery,
+    };
+  }
+
+  return {
+    shouldSearch: false,
+    reason: "no clear search intent or time-sensitive need",
+    query: normalizedQuery,
+  };
+}
+
 function getContentText(content: OpenAIChatMessage["content"]) {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
@@ -217,24 +302,29 @@ export async function requestOpenai(req: NextRequest) {
     path.endsWith("chat/completions");
 
   if (shouldUseWebSearch && requestBodyText) {
-    if (!serverConfig.tavilyApiKey) {
-      return NextResponse.json(
-        {
-          error: true,
-          message: "TAVILY_API_KEY is not configured.",
-        },
-        { status: 400 },
-      );
-    }
-
     try {
       const jsonBody = JSON.parse(requestBodyText) as OpenAIChatBody;
-      const bodyWithSearch = await injectTavilySearchContext(
-        jsonBody,
-        serverConfig.tavilyApiKey,
-      );
-      requestBodyText = JSON.stringify(bodyWithSearch);
-      fetchOptions.body = requestBodyText;
+      const searchDecision = decideWebSearch(jsonBody);
+      console.log("[Tavily Search Decision]", searchDecision);
+
+      if (searchDecision.shouldSearch) {
+        if (!serverConfig.tavilyApiKey) {
+          return NextResponse.json(
+            {
+              error: true,
+              message: "TAVILY_API_KEY is not configured.",
+            },
+            { status: 400 },
+          );
+        }
+
+        const bodyWithSearch = await injectTavilySearchContext(
+          jsonBody,
+          serverConfig.tavilyApiKey,
+        );
+        requestBodyText = JSON.stringify(bodyWithSearch);
+        fetchOptions.body = requestBodyText;
+      }
     } catch (e) {
       console.error("[Tavily Search]", e);
       return NextResponse.json(
