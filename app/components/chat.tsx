@@ -34,7 +34,6 @@ import ConfirmIcon from "../icons/confirm.svg";
 import CloseIcon from "../icons/close.svg";
 import CancelIcon from "../icons/cancel.svg";
 import ImageIcon from "../icons/image.svg";
-import ConnectionIcon from "../icons/connection.svg";
 
 import LightIcon from "../icons/light.svg";
 import DarkIcon from "../icons/dark.svg";
@@ -605,20 +604,6 @@ export function ChatActions(props: {
   return (
     <div className={styles["chat-input-actions"]}>
       <div className={styles["chat-input-actions-primary"]}>
-        <ChatAction
-          onClick={() => {
-            config.update(
-              (config) => (config.enableWebSearch = !config.enableWebSearch),
-            );
-          }}
-          text={
-            config.enableWebSearch
-              ? Locale.Chat.InputActions.WebSearchOn
-              : Locale.Chat.InputActions.WebSearchOff
-          }
-          icon={<ConnectionIcon />}
-          active={config.enableWebSearch}
-        />
         {showUploadImage && (
           <ChatAction
             onClick={props.uploadImage}

@@ -272,7 +272,7 @@ export class ChatGPTApi implements LLMApi {
     options.onController?.(controller);
     const requestHeaders = {
       ...getHeaders(),
-      ...(options.enableWebSearch ? { "x-nextchat-web-search": "1" } : {}),
+      "x-nextchat-web-search": "1",
     };
 
     try {
