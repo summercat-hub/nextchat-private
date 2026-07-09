@@ -38,6 +38,45 @@ export enum Theme {
 
 const config = getClientConfig();
 
+const PRIVATE_DEFAULT_MODEL = "google/gemma-4-31B-it" as ModelType;
+const PRIVATE_DEFAULT_PROVIDER = ServiceProvider.OpenAI;
+const PRIVATE_DEFAULT_TEMPERATURE = 0.4;
+const PRIVATE_DEFAULT_MAX_TOKENS = 16000;
+const PRIVATE_DEFAULT_HISTORY_MESSAGE_COUNT = 24;
+const PRIVATE_DEFAULT_COMPRESS_THRESHOLD = 4000;
+
+export function applyPrivateChatDefaults(modelConfig: ModelConfig) {
+  if (!modelConfig) return;
+
+  if (!modelConfig.model || modelConfig.model === "gpt-4o-mini") {
+    modelConfig.model = PRIVATE_DEFAULT_MODEL;
+    modelConfig.providerName = PRIVATE_DEFAULT_PROVIDER;
+  }
+
+  if (modelConfig.temperature === 0.5 || modelConfig.temperature == null) {
+    modelConfig.temperature = PRIVATE_DEFAULT_TEMPERATURE;
+  }
+
+  if (modelConfig.max_tokens === 4000 || modelConfig.max_tokens == null) {
+    modelConfig.max_tokens = PRIVATE_DEFAULT_MAX_TOKENS;
+  }
+
+  if (
+    modelConfig.historyMessageCount === 4 ||
+    modelConfig.historyMessageCount == null
+  ) {
+    modelConfig.historyMessageCount = PRIVATE_DEFAULT_HISTORY_MESSAGE_COUNT;
+  }
+
+  if (
+    modelConfig.compressMessageLengthThreshold === 1000 ||
+    modelConfig.compressMessageLengthThreshold == null
+  ) {
+    modelConfig.compressMessageLengthThreshold =
+      PRIVATE_DEFAULT_COMPRESS_THRESHOLD;
+  }
+}
+
 export const DEFAULT_CONFIG = {
   lastUpdate: Date.now(), // timestamp, to merge state
 
@@ -65,16 +104,16 @@ export const DEFAULT_CONFIG = {
   models: DEFAULT_MODELS as any as LLMModel[],
 
   modelConfig: {
-    model: "gpt-4o-mini" as ModelType,
-    providerName: "OpenAI" as ServiceProvider,
-    temperature: 0.5,
+    model: PRIVATE_DEFAULT_MODEL,
+    providerName: PRIVATE_DEFAULT_PROVIDER,
+    temperature: PRIVATE_DEFAULT_TEMPERATURE,
     top_p: 1,
-    max_tokens: 4000,
+    max_tokens: PRIVATE_DEFAULT_MAX_TOKENS,
     presence_penalty: 0,
     frequency_penalty: 0,
     sendMemory: true,
-    historyMessageCount: 4,
-    compressMessageLengthThreshold: 1000,
+    historyMessageCount: PRIVATE_DEFAULT_HISTORY_MESSAGE_COUNT,
+    compressMessageLengthThreshold: PRIVATE_DEFAULT_COMPRESS_THRESHOLD,
     compressModel: "",
     compressProviderName: "",
     enableInjectSystemPrompts: true,
@@ -196,7 +235,7 @@ export const useAppConfig = createPersistStore(
   }),
   {
     name: StoreKey.Config,
-    version: 4.1,
+    version: 4.2,
 
     merge(persistedState, currentState) {
       const state = persistedState as ChatConfig | undefined;
@@ -254,6 +293,10 @@ export const useAppConfig = createPersistStore(
           DEFAULT_CONFIG.modelConfig.compressModel;
         state.modelConfig.compressProviderName =
           DEFAULT_CONFIG.modelConfig.compressProviderName;
+      }
+
+      if (version < 4.2) {
+        applyPrivateChatDefaults(state.modelConfig);
       }
 
       return state as any;

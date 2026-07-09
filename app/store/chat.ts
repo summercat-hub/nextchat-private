@@ -32,7 +32,12 @@ import Locale, { getLang } from "../locales";
 import { prettyObject } from "../utils/format";
 import { createPersistStore } from "../utils/store";
 import { estimateTokenLength } from "../utils/token";
-import { ModelConfig, ModelType, useAppConfig } from "./config";
+import {
+  applyPrivateChatDefaults,
+  ModelConfig,
+  ModelType,
+  useAppConfig,
+} from "./config";
 import { useAccessStore } from "./access";
 import { collectModelsWithDefaultModel } from "../utils/model";
 import { createEmptyMask, Mask } from "./mask";
@@ -861,7 +866,7 @@ export const useChatStore = createPersistStore(
   },
   {
     name: StoreKey.Chat,
-    version: 3.3,
+    version: 3.4,
     migrate(persistedState, version) {
       const state = persistedState as any;
       const newState = JSON.parse(
@@ -923,6 +928,12 @@ export const useChatStore = createPersistStore(
           const config = useAppConfig.getState();
           s.mask.modelConfig.compressModel = "";
           s.mask.modelConfig.compressProviderName = "";
+        });
+      }
+
+      if (version < 3.4) {
+        newState.sessions.forEach((s) => {
+          applyPrivateChatDefaults(s.mask.modelConfig);
         });
       }
 
