@@ -1,5 +1,4 @@
 import { getClientConfig } from "../config/client";
-import { SubmitKey } from "../store/config";
 import { SAAS_CHAT_UTM_URL } from "@/app/constant";
 
 const isApp = !!getClientConfig()?.isApp;
@@ -82,12 +81,8 @@ const cn = {
     },
     Rename: "重命名对话",
     Typing: "正在输入…",
-    Input: (submitKey: string) => {
-      var inputHints = `${submitKey} 发送`;
-      if (submitKey === String(SubmitKey.Enter)) {
-        inputHints += "，Shift + Enter 换行";
-      }
-      return inputHints + "，/ 触发补全，: 触发命令";
+    Input: (_submitKey: string) => {
+      return "需要了解什么?";
     },
     Send: "发送",
     StartSpeak: "说话",
