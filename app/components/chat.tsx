@@ -122,7 +122,6 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from "../utils/ms_edge_tts";
 
 import { isEmpty } from "lodash-es";
 import { getModelProvider } from "../utils/model";
-import { RealtimeChat } from "@/app/components/realtime-chat";
 import clsx from "clsx";
 import { getAvailableClientsCount, isMcpEnabled } from "../mcp/actions";
 
@@ -133,6 +132,14 @@ const ttsPlayer = createTTSPlayer();
 const Markdown = dynamic(async () => (await import("./markdown")).Markdown, {
   loading: () => <LoadingIcon />,
 });
+
+const RealtimeChat = dynamic(
+  async () => (await import("@/app/components/realtime-chat")).RealtimeChat,
+  {
+    ssr: false,
+    loading: () => <LoadingIcon />,
+  },
+);
 
 const MCPAction = () => {
   const navigate = useNavigate();
@@ -575,7 +582,8 @@ export function ChatActions(props: {
   const isMobileScreen = useMobileScreen();
 
   useEffect(() => {
-    const show = isVisionModel(currentModel) || /gemini-3\./i.test(currentModel);
+    const show =
+      isVisionModel(currentModel) || /gemini-3\./i.test(currentModel);
     setShowUploadImage(show);
     if (!show) {
       props.setAttachImages([]);

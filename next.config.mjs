@@ -21,7 +21,10 @@ const nextConfig = {
     }
 
     config.resolve.fallback = {
+      ...config.resolve.fallback,
       child_process: false,
+      bufferutil: false,
+      "utf-8-validate": false,
     };
 
     return config;
