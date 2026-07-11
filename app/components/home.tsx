@@ -21,6 +21,7 @@ import {
   Route,
   Routes,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 import { SideBar } from "./sidebar";
 import { useAppConfig } from "../store/config";
@@ -103,8 +104,8 @@ export function useSwitchTheme() {
     );
 
     if (config.theme === "auto") {
-      metaDescriptionDark?.setAttribute("content", "#151515");
-      metaDescriptionLight?.setAttribute("content", "#fafafa");
+      metaDescriptionDark?.setAttribute("content", "#121214");
+      metaDescriptionLight?.setAttribute("content", "#f7f8f9");
     } else {
       const themeColor = getCSSVar("--theme-color");
       metaDescriptionDark?.setAttribute("content", themeColor);
@@ -134,21 +135,6 @@ const useHasHydrated = () => {
   return hasHydrated;
 };
 
-const loadAsyncGoogleFont = () => {
-  const linkEl = document.createElement("link");
-  const proxyFontUrl = "/google-fonts";
-  const remoteFontUrl = "https://fonts.googleapis.com";
-  const googleFontUrl =
-    getClientConfig()?.buildMode === "export" ? remoteFontUrl : proxyFontUrl;
-  linkEl.rel = "stylesheet";
-  linkEl.href =
-    googleFontUrl +
-    "/css2?family=" +
-    encodeURIComponent("Noto Sans:wght@300;400;700;900") +
-    "&display=swap";
-  document.head.appendChild(linkEl);
-};
-
 export function WindowContent(props: { children: React.ReactNode }) {
   return (
     <div className={styles["window-content"]} id={SlotID.AppBody}>
@@ -160,6 +146,7 @@ export function WindowContent(props: { children: React.ReactNode }) {
 function Screen() {
   const config = useAppConfig();
   const location = useLocation();
+  const navigate = useNavigate();
   const isArtifact = location.pathname.includes(Path.Artifacts);
   const isHome = location.pathname === Path.Home;
   const isAuth = location.pathname === Path.Auth;
@@ -169,10 +156,6 @@ function Screen() {
   const isMobileScreen = useMobileScreen();
   const shouldTightBorder =
     getClientConfig()?.isApp || (config.tightBorder && !isMobileScreen);
-
-  useEffect(() => {
-    loadAsyncGoogleFont();
-  }, []);
 
   if (isArtifact) {
     return (
@@ -192,6 +175,14 @@ function Screen() {
             [styles["sidebar-show"]]: isHome,
           })}
         />
+        {isMobileScreen && isHome && (
+          <button
+            type="button"
+            className={styles["sidebar-backdrop"]}
+            aria-label={"关闭会话列表"}
+            onClick={() => navigate(Path.Chat)}
+          />
+        )}
         <WindowContent>
           <Routes>
             <Route path={Path.Home} element={<Chat />} />

@@ -113,7 +113,6 @@ import { ContextPrompts, MaskAvatar, MaskConfig } from "./mask";
 import { useMaskStore } from "../store/mask";
 import { ChatCommandPrefix, useChatCommand, useCommand } from "../command";
 import { prettyObject } from "../utils/format";
-import { ExportMessageModal } from "./exporter";
 import { getClientConfig } from "../config/client";
 import { useAllModels } from "../utils/hooks";
 import { ClientApi, MultimodalContent } from "../client/api";
@@ -132,6 +131,14 @@ const ttsPlayer = createTTSPlayer();
 const Markdown = dynamic(async () => (await import("./markdown")).Markdown, {
   loading: () => <LoadingIcon />,
 });
+
+const ExportMessageModal = dynamic(
+  async () => (await import("./exporter")).ExportMessageModal,
+  {
+    ssr: false,
+    loading: () => <LoadingIcon />,
+  },
+);
 
 const RealtimeChat = dynamic(
   async () => (await import("@/app/components/realtime-chat")).RealtimeChat,
@@ -433,11 +440,12 @@ export function ChatAction(props: {
   }
 
   return (
-    <div
+    <button
+      type="button"
+      aria-label={props.text}
       className={clsx(
         styles["chat-input-action"],
         props.active && styles["chat-input-action-active"],
-        "clickable",
       )}
       onClick={() => {
         props.onClick();
@@ -458,7 +466,7 @@ export function ChatAction(props: {
       <div className={styles["text"]} ref={textRef}>
         {props.text}
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -1701,6 +1709,7 @@ function _Chat() {
                   icon={<ReturnIcon />}
                   bordered
                   title={Locale.Chat.Actions.ChatList}
+                  aria={Locale.Chat.Actions.ChatList}
                   onClick={() => navigate(Path.Home)}
                 />
               </div>
@@ -1724,17 +1733,20 @@ function _Chat() {
             </div>
           </div>
           <div className="window-actions">
-            <div className="window-action-button">
-              <IconButton
-                icon={<ReloadIcon />}
-                bordered
-                title={Locale.Chat.Actions.RefreshTitle}
-                onClick={() => {
-                  showToast(Locale.Chat.Actions.RefreshToast);
-                  chatStore.summarizeSession(true, session);
-                }}
-              />
-            </div>
+            {!isMobileScreen && (
+              <div className="window-action-button">
+                <IconButton
+                  icon={<ReloadIcon />}
+                  bordered
+                  title={Locale.Chat.Actions.RefreshTitle}
+                  aria={Locale.Chat.Actions.RefreshTitle}
+                  onClick={() => {
+                    showToast(Locale.Chat.Actions.RefreshToast);
+                    chatStore.summarizeSession(true, session);
+                  }}
+                />
+              </div>
+            )}
             {!isMobileScreen && (
               <div className="window-action-button">
                 <IconButton
@@ -1751,6 +1763,7 @@ function _Chat() {
                 icon={<ExportIcon />}
                 bordered
                 title={Locale.Chat.Actions.Export}
+                aria={Locale.Chat.Actions.Export}
                 onClick={() => {
                   setShowExport(true);
                 }}

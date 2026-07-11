@@ -23,7 +23,7 @@ import {
 } from "../constant";
 
 import { Link, useNavigate } from "react-router-dom";
-import { isIOS, useMobileScreen } from "../utils";
+import { isIOS, useCompactScreen, useMobileScreen } from "../utils";
 import dynamic from "next/dynamic";
 import { showConfirm } from "./ui-lib";
 import clsx from "clsx";
@@ -109,16 +109,23 @@ export function useDragSideBar() {
   };
 
   const isMobileScreen = useMobileScreen();
+  const isCompactScreen = useCompactScreen();
   const shouldNarrow =
-    !isMobileScreen && config.sidebarWidth < MIN_SIDEBAR_WIDTH;
+    !isMobileScreen &&
+    !isCompactScreen &&
+    config.sidebarWidth < MIN_SIDEBAR_WIDTH;
 
   useEffect(() => {
     const barWidth = shouldNarrow
       ? NARROW_SIDEBAR_WIDTH
       : limit(config.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH);
-    const sideBarWidth = isMobileScreen ? "100vw" : `${barWidth}px`;
+    const sideBarWidth = isMobileScreen
+      ? "min(88vw, 360px)"
+      : isCompactScreen
+      ? "240px"
+      : `${barWidth}px`;
     document.documentElement.style.setProperty("--sidebar-width", sideBarWidth);
-  }, [config.sidebarWidth, isMobileScreen, shouldNarrow]);
+  }, [config.sidebarWidth, isCompactScreen, isMobileScreen, shouldNarrow]);
 
   return {
     onDragStart,

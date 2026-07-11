@@ -1263,44 +1263,44 @@ export function Settings() {
     </>
   );
 
-  const ai302ConfigComponent = accessStore.provider === ServiceProvider["302.AI"] && (
+  const ai302ConfigComponent = accessStore.provider ===
+    ServiceProvider["302.AI"] && (
     <>
       <ListItem
-          title={Locale.Settings.Access.AI302.Endpoint.Title}
-          subTitle={
-            Locale.Settings.Access.AI302.Endpoint.SubTitle +
-            AI302.ExampleEndpoint
+        title={Locale.Settings.Access.AI302.Endpoint.Title}
+        subTitle={
+          Locale.Settings.Access.AI302.Endpoint.SubTitle + AI302.ExampleEndpoint
+        }
+      >
+        <input
+          aria-label={Locale.Settings.Access.AI302.Endpoint.Title}
+          type="text"
+          value={accessStore.ai302Url}
+          placeholder={AI302.ExampleEndpoint}
+          onChange={(e) =>
+            accessStore.update(
+              (access) => (access.ai302Url = e.currentTarget.value),
+            )
           }
-        >
-          <input
-            aria-label={Locale.Settings.Access.AI302.Endpoint.Title}
-            type="text"
-            value={accessStore.ai302Url}
-            placeholder={AI302.ExampleEndpoint}
-            onChange={(e) =>
-              accessStore.update(
-                (access) => (access.ai302Url = e.currentTarget.value),
-              )
-            }
-          ></input>
-        </ListItem>
-        <ListItem
-          title={Locale.Settings.Access.AI302.ApiKey.Title}
-          subTitle={Locale.Settings.Access.AI302.ApiKey.SubTitle}
-        >
-          <PasswordInput
-            aria-label={Locale.Settings.Access.AI302.ApiKey.Title}
-            value={accessStore.ai302ApiKey}
-            type="text"
-            placeholder={Locale.Settings.Access.AI302.ApiKey.Placeholder}
-            onChange={(e) => {
-              accessStore.update(
-                (access) => (access.ai302ApiKey = e.currentTarget.value),
-              );
-            }}
-          />
-        </ListItem>
-      </>
+        ></input>
+      </ListItem>
+      <ListItem
+        title={Locale.Settings.Access.AI302.ApiKey.Title}
+        subTitle={Locale.Settings.Access.AI302.ApiKey.SubTitle}
+      >
+        <PasswordInput
+          aria-label={Locale.Settings.Access.AI302.ApiKey.Title}
+          value={accessStore.ai302ApiKey}
+          type="text"
+          placeholder={Locale.Settings.Access.AI302.ApiKey.Placeholder}
+          onChange={(e) => {
+            accessStore.update(
+              (access) => (access.ai302ApiKey = e.currentTarget.value),
+            );
+          }}
+        />
+      </ListItem>
+    </>
   );
 
   return (
@@ -1546,119 +1546,130 @@ export function Settings() {
           </ListItem>
         </List>
 
+        {accessCodeComponent && <List>{accessCodeComponent}</List>}
+
         <SyncItems />
 
-        <List id={SlotID.CustomModel}>
-          {accessCodeComponent}
-
-          {!accessStore.hideUserApiKey && (
-            <>
-              {useCustomConfigComponent}
-
-              {accessStore.useCustomConfig && (
+        <details className={styles["advanced-settings"]}>
+          <summary className={styles["advanced-settings-summary"]}>
+            高级设置
+          </summary>
+          <div className={styles["advanced-settings-content"]}>
+            <List id={SlotID.CustomModel}>
+              {!accessStore.hideUserApiKey && (
                 <>
-                  <ListItem
-                    title={Locale.Settings.Access.Provider.Title}
-                    subTitle={Locale.Settings.Access.Provider.SubTitle}
-                  >
-                    <Select
-                      aria-label={Locale.Settings.Access.Provider.Title}
-                      value={accessStore.provider}
-                      onChange={(e) => {
-                        accessStore.update(
-                          (access) =>
-                            (access.provider = e.target
-                              .value as ServiceProvider),
-                        );
-                      }}
-                    >
-                      {Object.entries(ServiceProvider).map(([k, v]) => (
-                        <option value={v} key={k}>
-                          {k}
-                        </option>
-                      ))}
-                    </Select>
-                  </ListItem>
+                  {useCustomConfigComponent}
 
-                  {openAIConfigComponent}
-                  {azureConfigComponent}
-                  {googleConfigComponent}
-                  {anthropicConfigComponent}
-                  {baiduConfigComponent}
-                  {byteDanceConfigComponent}
-                  {alibabaConfigComponent}
-                  {tencentConfigComponent}
-                  {moonshotConfigComponent}
-                  {deepseekConfigComponent}
-                  {stabilityConfigComponent}
-                  {lflytekConfigComponent}
-                  {XAIConfigComponent}
-                  {chatglmConfigComponent}
-                  {siliconflowConfigComponent}
-                  {ai302ConfigComponent}
+                  {accessStore.useCustomConfig && (
+                    <>
+                      <ListItem
+                        title={Locale.Settings.Access.Provider.Title}
+                        subTitle={Locale.Settings.Access.Provider.SubTitle}
+                      >
+                        <Select
+                          aria-label={Locale.Settings.Access.Provider.Title}
+                          value={accessStore.provider}
+                          onChange={(e) => {
+                            accessStore.update(
+                              (access) =>
+                                (access.provider = e.target
+                                  .value as ServiceProvider),
+                            );
+                          }}
+                        >
+                          {Object.entries(ServiceProvider).map(([k, v]) => (
+                            <option value={v} key={k}>
+                              {k}
+                            </option>
+                          ))}
+                        </Select>
+                      </ListItem>
+
+                      {openAIConfigComponent}
+                      {azureConfigComponent}
+                      {googleConfigComponent}
+                      {anthropicConfigComponent}
+                      {baiduConfigComponent}
+                      {byteDanceConfigComponent}
+                      {alibabaConfigComponent}
+                      {tencentConfigComponent}
+                      {moonshotConfigComponent}
+                      {deepseekConfigComponent}
+                      {stabilityConfigComponent}
+                      {lflytekConfigComponent}
+                      {XAIConfigComponent}
+                      {chatglmConfigComponent}
+                      {siliconflowConfigComponent}
+                      {ai302ConfigComponent}
+                    </>
+                  )}
                 </>
               )}
-            </>
-          )}
 
-          {!shouldHideBalanceQuery && !clientConfig?.isApp ? (
-            <ListItem
-              title={Locale.Settings.Usage.Title}
-              subTitle={
-                showUsage
-                  ? loadingUsage
-                    ? Locale.Settings.Usage.IsChecking
-                    : Locale.Settings.Usage.SubTitle(
-                        usage?.used ?? "[?]",
-                        usage?.subscription ?? "[?]",
-                      )
-                  : Locale.Settings.Usage.NoAccess
-              }
-            >
-              {!showUsage || loadingUsage ? (
-                <div />
-              ) : (
-                <IconButton
-                  icon={<ResetIcon></ResetIcon>}
-                  text={Locale.Settings.Usage.Check}
-                  onClick={() => checkUsage(true)}
-                />
-              )}
-            </ListItem>
-          ) : null}
+              {!shouldHideBalanceQuery && !clientConfig?.isApp ? (
+                <ListItem
+                  title={Locale.Settings.Usage.Title}
+                  subTitle={
+                    showUsage
+                      ? loadingUsage
+                        ? Locale.Settings.Usage.IsChecking
+                        : Locale.Settings.Usage.SubTitle(
+                            usage?.used ?? "[?]",
+                            usage?.subscription ?? "[?]",
+                          )
+                      : Locale.Settings.Usage.NoAccess
+                  }
+                >
+                  {!showUsage || loadingUsage ? (
+                    <div />
+                  ) : (
+                    <IconButton
+                      icon={<ResetIcon></ResetIcon>}
+                      text={Locale.Settings.Usage.Check}
+                      onClick={() => checkUsage(true)}
+                    />
+                  )}
+                </ListItem>
+              ) : null}
 
-          <ListItem
-            title={Locale.Settings.Access.CustomModel.Title}
-            subTitle={Locale.Settings.Access.CustomModel.SubTitle}
-            vertical={true}
-          >
-            <input
-              aria-label={Locale.Settings.Access.CustomModel.Title}
-              style={{ width: "100%", maxWidth: "unset", textAlign: "left" }}
-              type="text"
-              value={config.customModels}
-              placeholder="model1,model2,model3"
-              onChange={(e) =>
-                config.update(
-                  (config) => (config.customModels = e.currentTarget.value),
-                )
-              }
-            ></input>
-          </ListItem>
-        </List>
+              <ListItem
+                title={Locale.Settings.Access.CustomModel.Title}
+                subTitle={Locale.Settings.Access.CustomModel.SubTitle}
+                vertical={true}
+              >
+                <input
+                  aria-label={Locale.Settings.Access.CustomModel.Title}
+                  style={{
+                    width: "100%",
+                    maxWidth: "unset",
+                    textAlign: "left",
+                  }}
+                  type="text"
+                  value={config.customModels}
+                  placeholder="model1,model2,model3"
+                  onChange={(e) =>
+                    config.update(
+                      (config) => (config.customModels = e.currentTarget.value),
+                    )
+                  }
+                ></input>
+              </ListItem>
+            </List>
 
-        <List>
-          <RealtimeConfigList
-            realtimeConfig={config.realtimeConfig}
-            updateConfig={(updater) => {
-              const realtimeConfig = { ...config.realtimeConfig };
-              updater(realtimeConfig);
-              config.update(
-                (config) => (config.realtimeConfig = realtimeConfig),
-              );
-            }}
-          />
-        </List>
+            <List>
+              <RealtimeConfigList
+                realtimeConfig={config.realtimeConfig}
+                updateConfig={(updater) => {
+                  const realtimeConfig = { ...config.realtimeConfig };
+                  updater(realtimeConfig);
+                  config.update(
+                    (config) => (config.realtimeConfig = realtimeConfig),
+                  );
+                }}
+              />
+            </List>
+          </div>
+        </details>
         <DangerItems />
       </div>
     </ErrorBoundary>

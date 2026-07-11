@@ -1,6 +1,6 @@
 {
-  "name": "NextChat",
-  "short_name": "NextChat",
+  "name": "Free Chat",
+  "short_name": "Free Chat",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -14,7 +14,7 @@
     }
   ],
   "start_url": "/",
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
+  "theme_color": "#f7f8f9",
+  "background_color": "#f7f8f9",
   "display": "standalone"
 }

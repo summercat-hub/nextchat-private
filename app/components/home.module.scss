@@ -1,11 +1,10 @@
 @mixin container {
-  background-color: var(--white);
+  background-color: var(--surface-primary);
   border: var(--border-in-light);
-  border-radius: 20px;
+  border-radius: var(--radius-large);
   box-shadow: var(--shadow);
-  color: var(--black);
-  background-color: var(--white);
-  min-width: 600px;
+  color: var(--text-primary);
+  min-width: 640px;
   min-height: 370px;
   max-width: 1200px;
 
@@ -21,7 +20,7 @@
   @include container();
 }
 
-@media only screen and (min-width: 600px) {
+@media only screen and (min-width: 641px) {
   .tight-container {
     --window-width: 100vw;
     --window-height: var(--full-height);
@@ -45,9 +44,9 @@
   background-color: var(--second);
   display: flex;
   flex-direction: column;
-  box-shadow: inset -2px 0px 2px 0px rgb(0, 0, 0, 0.05);
+  box-shadow: inset -1px 0 0 var(--separator);
   position: relative;
-  transition: width ease 0.05s;
+  transition: width var(--motion-press) ease-out;
 
   .sidebar-header-bar {
     display: flex;
@@ -84,7 +83,9 @@
   width: $width;
   background-color: rgba($color: #000000, $alpha: 0);
   cursor: ew-resize;
-  transition: all ease 0.3s;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-out);
   display: flex;
   align-items: center;
 
@@ -101,11 +102,23 @@
   flex-direction: column;
 }
 
-.mobile {
+.mobile,
+.sidebar-backdrop {
   display: none;
 }
 
-@media only screen and (max-width: 600px) {
+@media only screen and (min-width: 641px) and (max-width: 1024px) {
+  .sidebar {
+    padding: 14px;
+  }
+
+  .sidebar-header {
+    padding-top: 12px;
+    padding-bottom: 16px;
+  }
+}
+
+@media only screen and (max-width: 640px) {
   .container {
     min-height: unset;
     min-width: unset;
@@ -116,16 +129,41 @@
   }
 
   .sidebar {
-    position: absolute;
-    left: -100%;
-    z-index: 1000;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1001;
     height: var(--full-height);
-    transition: all ease 0.3s;
-    box-shadow: none;
+    padding-top: calc(14px + env(safe-area-inset-top));
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+    transform: translateX(-100%);
+    transition: transform var(--motion-normal) var(--ease-out);
+    box-shadow: var(--elevated-shadow);
+    will-change: transform;
   }
 
   .sidebar-show {
-    left: 0;
+    transform: translateX(0);
+  }
+
+  .sidebar-drag {
+    display: none;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: var(--sidebar-width);
+    z-index: 1000;
+    padding: 0;
+    border: 0;
+    background: var(--scrim);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    animation: fade-in var(--motion-fast) var(--ease-out);
   }
 
   .mobile {
@@ -156,14 +194,19 @@
 
 .sidebar-title {
   font-size: 20px;
-  font-weight: bold;
-  animation: slide-in ease 0.3s;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  animation: slide-in var(--motion-normal) var(--ease-out);
 }
 
 .sidebar-sub-title {
+  margin-top: 4px;
   font-size: 12px;
+  line-height: 1.35;
   font-weight: 400;
-  animation: slide-in ease 0.3s;
+  color: var(--text-secondary);
+  animation: slide-in var(--motion-normal) var(--ease-out);
 }
 
 .sidebar-body {
@@ -172,26 +215,56 @@
   overflow-x: hidden;
 }
 
-.chat-item {
-  padding: 10px 14px;
-  background-color: var(--white);
-  border-radius: 10px;
-  margin-bottom: 10px;
-  box-shadow: var(--card-shadow);
-  transition: background-color 0.3s ease;
-  cursor: pointer;
-  user-select: none;
-  border: 2px solid transparent;
+.chat-item-wrapper {
   position: relative;
-  content-visibility: auto;
 }
 
-.chat-item:hover {
+.chat-item {
+  width: 100%;
+  padding: 11px 14px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background-color: transparent;
+  border-radius: var(--radius-medium);
+  margin-bottom: 6px;
+  box-shadow: none;
+  transition:
+    transform var(--motion-press) ease-out,
+    background-color var(--motion-fast) var(--ease-out);
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+  position: relative;
+  content-visibility: auto;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+
+  &:active {
+    transform: scale(0.985);
+  }
+}
+
+.chat-item:hover,
+.chat-item:focus-visible {
   background-color: var(--hover-color);
 }
 
 .chat-item-selected {
-  border-color: var(--primary);
+  background-color: var(--surface-primary);
+  border-color: var(--separator);
+  box-shadow: var(--card-shadow);
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    left: 5px;
+    width: 3px;
+    border-radius: 999px;
+    background: var(--primary);
+  }
 }
 
 .chat-item-title {
@@ -207,16 +280,37 @@
 
 .chat-item-delete {
   position: absolute;
-  top: 0;
-  right: 0;
-  transition: all ease 0.3s;
+  top: 2px;
+  right: 2px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  z-index: 2;
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
   opacity: 0;
   cursor: pointer;
 }
 
-.chat-item:hover > .chat-item-delete {
-  opacity: 0.5;
+.chat-item-wrapper:hover > .chat-item-delete,
+.chat-item-wrapper:focus-within > .chat-item-delete {
+  opacity: 0.65;
   transform: translateX(-4px);
+}
+
+@media only screen and (max-width: 640px) {
+  .chat-item-delete {
+    opacity: 0.55;
+    transform: translateX(-4px);
+  }
 }
 
 .chat-item:hover > .chat-item-delete:hover {
@@ -267,7 +361,9 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: all ease 0.3s;
+    transition:
+      transform var(--motion-press) ease-out,
+      background-color var(--motion-fast) var(--ease-out);
     overflow: hidden;
 
     &:hover {
@@ -282,7 +378,7 @@
     font-weight: lighter;
     color: var(--black);
     transform: translateX(0);
-    transition: all ease 0.3s;
+    transition: transform var(--motion-normal) var(--ease-out);
     padding: 4px;
     display: flex;
     flex-direction: column;

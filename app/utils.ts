@@ -142,11 +142,19 @@ export function useWindowSize() {
   return size;
 }
 
-export const MOBILE_MAX_WIDTH = 600;
+export const MOBILE_MAX_WIDTH = 640;
+export const COMPACT_MAX_WIDTH = 1024;
+
 export function useMobileScreen() {
   const { width } = useWindowSize();
 
   return width <= MOBILE_MAX_WIDTH;
+}
+
+export function useCompactScreen() {
+  const { width } = useWindowSize();
+
+  return width > MOBILE_MAX_WIDTH && width <= COMPACT_MAX_WIDTH;
 }
 
 export function isFirefox() {

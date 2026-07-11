@@ -22,12 +22,12 @@
   input {
     margin-right: 20px;
 
-    @media screen and (max-width: 600px) {
+    @media screen and (max-width: 640px) {
         margin-right: 0px;
       }
   }
 
-  @media screen and (max-width: 600px) {
+  @media screen and (max-width: 640px) {
     flex-direction: column;
     gap: 5px;
 

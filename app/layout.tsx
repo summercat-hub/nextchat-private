@@ -9,10 +9,10 @@ import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 import { getServerSideConfig } from "./config/server";
 
 export const metadata: Metadata = {
-  title: "NextChat",
-  description: "Your personal ChatGPT Chat Bot.",
+  title: "Free Chat",
+  description: "简单、私密的 AI 聊天助手。",
   appleWebApp: {
-    title: "NextChat",
+    title: "Free Chat",
     statusBarStyle: "default",
   },
 };
@@ -20,10 +20,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
-    { media: "(prefers-color-scheme: dark)", color: "#151515" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f8f9" },
+    { media: "(prefers-color-scheme: dark)", color: "#121214" },
   ],
 };
 
@@ -35,13 +34,9 @@ export default function RootLayout({
   const serverConfig = getServerSideConfig();
 
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <head>
         <meta name="config" content={JSON.stringify(getClientConfig())} />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-        />
         <link
           rel="manifest"
           href="/site.webmanifest"

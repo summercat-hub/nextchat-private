@@ -20,11 +20,13 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useId,
   useRef,
 } from "react";
 import { IconButton } from "./button";
 import { Avatar } from "./emoji";
 import clsx from "clsx";
+import { useMobileScreen } from "../utils";
 
 export function Popover(props: {
   children: JSX.Element;
@@ -120,45 +122,101 @@ interface ModalProps {
   onClose?: () => void;
 }
 export function Modal(props: ModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const onClose = props.onClose;
+  const isMobileScreen = useMobileScreen();
+
   useEffect(() => {
+    const previousActiveElement = document.activeElement as HTMLElement | null;
+    const modal = modalRef.current;
+    const focusableSelector =
+      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    const focusInitialElement = () => {
+      const firstFocusable =
+        modal?.querySelector<HTMLElement>(focusableSelector);
+      (firstFocusable ?? modal)?.focus();
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        props.onClose?.();
+        onClose?.();
+        return;
+      }
+
+      if (e.key !== "Tab" || !modal) return;
+
+      const focusable = Array.from(
+        modal.querySelectorAll<HTMLElement>(focusableSelector),
+      ).filter((element) => !element.hasAttribute("disabled"));
+
+      if (focusable.length === 0) {
+        e.preventDefault();
+        modal.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
 
+    requestAnimationFrame(focusInitialElement);
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
       window.removeEventListener("keydown", onKeyDown);
+      previousActiveElement?.focus();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onClose]);
 
   const [isMax, setMax] = useState(!!props.defaultMax);
 
   return (
     <div
+      ref={modalRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      tabIndex={-1}
       className={clsx(styles["modal-container"], {
         [styles["modal-container-max"]]: isMax,
       })}
     >
       <div className={styles["modal-header"]}>
-        <div className={styles["modal-title"]}>{props.title}</div>
+        <div id={titleId} className={styles["modal-title"]}>
+          {props.title}
+        </div>
 
         <div className={styles["modal-header-actions"]}>
-          <div
+          {!isMobileScreen && (
+            <button
+              type="button"
+              className={clsx(
+                styles["modal-header-action"],
+                styles["modal-header-action-max"],
+              )}
+              aria-label={isMax ? "还原窗口" : "最大化窗口"}
+              onClick={() => setMax(!isMax)}
+            >
+              {isMax ? <MinIcon /> : <MaxIcon />}
+            </button>
+          )}
+          <button
+            type="button"
             className={styles["modal-header-action"]}
-            onClick={() => setMax(!isMax)}
-          >
-            {isMax ? <MinIcon /> : <MaxIcon />}
-          </div>
-          <div
-            className={styles["modal-header-action"]}
-            onClick={props.onClose}
+            aria-label="关闭"
+            onClick={onClose}
           >
             <CloseIcon />
-          </div>
+          </button>
         </div>
       </div>
 
