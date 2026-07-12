@@ -146,7 +146,8 @@
     transform: none;
     transition: none;
     box-shadow: inset -1px 0 0 var(--separator);
-    touch-action: pan-y;
+    touch-action: pan-y pinch-zoom;
+    overscroll-behavior-x: none;
   }
 
   .window-content {
@@ -162,6 +163,8 @@
       box-shadow var(--motion-fast) var(--ease-out);
     will-change: transform;
     overflow: hidden;
+    touch-action: pan-y pinch-zoom;
+    overscroll-behavior-x: none;
   }
 
   .drawer-open {
@@ -257,6 +260,7 @@
   flex: 1;
   overflow: auto;
   overflow-x: hidden;
+  touch-action: pan-y pinch-zoom;
 }
 
 .chat-item-wrapper {

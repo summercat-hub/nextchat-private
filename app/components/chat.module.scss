@@ -327,6 +327,7 @@
   position: relative;
   overscroll-behavior: contain;
   scroll-padding-bottom: 140px;
+  touch-action: pan-y pinch-zoom;
 }
 
 .chat-body-main-title {
