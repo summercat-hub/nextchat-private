@@ -162,7 +162,9 @@ export const WindowContent = forwardRef<
 const MOBILE_DRAWER_EVENT = "nextchat:open-mobile-drawer";
 const DRAWER_INTENT_THRESHOLD = 11;
 const DRAWER_INTENT_RATIO = 1.25;
-const DRAWER_VELOCITY_THRESHOLD = 650;
+const DRAWER_VELOCITY_THRESHOLD = 500;
+const DRAWER_MIN_COMMIT_DISTANCE = 52;
+const DRAWER_COMMIT_DISTANCE_RATIO = 0.38;
 
 function isSelectionActive() {
   const selection = window.getSelection?.();
@@ -190,38 +192,42 @@ function getGestureTargetElement(target: EventTarget | null) {
 
 function shouldIgnoreDrawerGesture(
   target: EventTarget | null,
-  allowSidebarControls = false,
+  allowDrawerCloseGesture = false,
 ) {
   const targetElement = getGestureTargetElement(target);
   if (!targetElement) return true;
   if (isSelectionActive()) return true;
 
-  const alwaysIgnored = targetElement.closest(
+  const blockingSurface = targetElement.closest(
+    ["[role='dialog']", "dialog", "[popover]", ".modal-mask", "iframe"].join(
+      ",",
+    ),
+  );
+  if (blockingSurface) return true;
+
+  // When the drawer is already open, the visible chat surface acts as a
+  // dismissible foreground layer. A left swipe should work from anywhere on
+  // that layer, even if the finger starts over a button or the input area.
+  if (allowDrawerCloseGesture) return false;
+
+  const ignoredTarget = targetElement.closest(
     [
       "input",
       "textarea",
       "select",
+      "button",
+      "a",
       "[contenteditable]",
-      "[role='dialog']",
-      "dialog",
-      "[popover]",
-      ".modal-mask",
       "code",
       "pre",
       "img",
       "video",
       "audio",
       "canvas",
-      "iframe",
     ].join(","),
   );
-  const interactiveTarget = targetElement.closest("button, a");
 
-  return (
-    !!alwaysIgnored ||
-    (!allowSidebarControls && !!interactiveTarget) ||
-    isHorizontallyScrollable(targetElement)
-  );
+  return !!ignoredTarget || isHorizontallyScrollable(targetElement);
 }
 
 function getDrawerDistance() {
@@ -236,6 +242,24 @@ function projectDrawerOffset(offset: number, velocityX: number) {
   const decelerationRate = 0.995;
   return (
     offset + (velocityX / 1000) * (decelerationRate / (1 - decelerationRate))
+  );
+}
+
+function getDrawerCommitDistance(
+  startX: number,
+  opening: boolean,
+  maxDistance: number,
+) {
+  const availableDistance = opening
+    ? Math.max(0, window.innerWidth - startX)
+    : Math.max(0, startX);
+
+  return Math.min(
+    maxDistance * DRAWER_COMMIT_DISTANCE_RATIO,
+    Math.max(
+      DRAWER_MIN_COMMIT_DISTANCE,
+      availableDistance * DRAWER_COMMIT_DISTANCE_RATIO,
+    ),
   );
 }
 
@@ -302,6 +326,7 @@ function Screen() {
     velocityX: 0,
     offset: 0,
     maxDistance: 1,
+    startedOpen: false,
     directionLocked: false,
     cancelled: false,
   });
@@ -415,16 +440,34 @@ function Screen() {
         return;
       }
 
-      const projectedOffset = projectDrawerOffset(
-        gesture.offset,
-        gesture.velocityX,
+      const opening = !gesture.startedOpen;
+      const projectedOffset = clampDrawerOffset(
+        projectDrawerOffset(gesture.offset, gesture.velocityX),
+        gesture.maxDistance,
       );
-      const shouldOpen =
-        gesture.velocityX > DRAWER_VELOCITY_THRESHOLD ||
-        (gesture.velocityX > -DRAWER_VELOCITY_THRESHOLD &&
-          projectedOffset >= gesture.maxDistance * 0.5);
+      const directTravel = opening
+        ? gesture.offset - gesture.startOffset
+        : gesture.startOffset - gesture.offset;
+      const projectedTravel = opening
+        ? projectedOffset - gesture.startOffset
+        : gesture.startOffset - projectedOffset;
+      const directionalVelocity = opening
+        ? gesture.velocityX
+        : -gesture.velocityX;
+      const requiredDistance = getDrawerCommitDistance(
+        gesture.startX,
+        opening,
+        gesture.maxDistance,
+      );
 
-      settleDrawer(shouldOpen);
+      const shouldChangeState =
+        directionalVelocity > DRAWER_VELOCITY_THRESHOLD ||
+        (directionalVelocity > -DRAWER_VELOCITY_THRESHOLD &&
+          Math.max(directTravel, projectedTravel) >= requiredDistance);
+
+      settleDrawer(
+        gesture.startedOpen ? !shouldChangeState : shouldChangeState,
+      );
     };
 
     const startDrawerGesture = (
@@ -434,13 +477,11 @@ function Screen() {
       target: EventTarget | null,
     ) => {
       const state = latestDrawerState.current;
-      const targetElement = getGestureTargetElement(target);
-      const allowSidebarControls =
-        state.isOpen && !!targetElement?.closest(`.${styles.sidebar}`);
+      const allowDrawerCloseGesture = state.isOpen;
 
       if (
         (state.pathname !== Path.Chat && state.pathname !== Path.Home) ||
-        shouldIgnoreDrawerGesture(target, allowSidebarControls)
+        shouldIgnoreDrawerGesture(target, allowDrawerCloseGesture)
       ) {
         return false;
       }
@@ -462,6 +503,7 @@ function Screen() {
         velocityX: 0,
         offset: startOffset,
         maxDistance,
+        startedOpen: state.isOpen,
         directionLocked: false,
         cancelled: false,
       };
