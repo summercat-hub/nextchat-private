@@ -34,7 +34,10 @@
       width: 0%;
       height: 100%;
       background-color: var(--white);
-      transition: all ease 0.3s;
+      transition:
+        width var(--motion-normal) var(--ease-out),
+        background-color var(--motion-fast) var(--ease-out),
+        box-shadow var(--motion-fast) var(--ease-out);
       border-radius: 8px;
     }
   }
@@ -49,7 +52,7 @@
       font-size: 14px;
       color: var(--black);
       opacity: 0.5;
-      transition: all ease 0.3s;
+      transition: opacity var(--motion-fast) var(--ease-out);
 
       display: flex;
       align-items: center;

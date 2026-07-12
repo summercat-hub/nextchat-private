@@ -1,125 +1,117 @@
 @import "../styles/animation.scss";
 
 .new-chat {
-  height: 100%;
+  min-height: 100%;
   width: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
   flex-direction: column;
+  background: var(--surface-primary);
+}
 
-  .mask-header {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    padding: 10px;
-    box-sizing: border-box;
-    animation: slide-in-from-top ease 0.3s;
+.new-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 64px;
+  padding: calc(10px + env(safe-area-inset-top))
+    calc(14px + env(safe-area-inset-right)) 10px
+    calc(14px + env(safe-area-inset-left));
+  box-sizing: border-box;
+}
+
+.new-chat-content {
+  width: min(100% - 32px, 520px);
+  margin: auto;
+  padding: 48px 0 max(72px, calc(36px + env(safe-area-inset-bottom)));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: slide-in var(--motion-normal) var(--ease-out);
+}
+
+.new-chat-symbol {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 24px;
+  border-radius: 20px;
+  color: var(--primary);
+  background: var(--surface-secondary);
+  border: 1px solid var(--separator);
+  box-shadow: var(--card-shadow);
+
+  svg {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(28px, 5vw, 38px);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  font-weight: 720;
+}
+
+.sub-title {
+  max-width: 420px;
+  margin: 14px 0 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.actions {
+  width: 100%;
+  margin-top: 36px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+
+  :global(.icon-button) {
+    min-height: 46px;
+    justify-content: center;
+    padding: 0 18px;
+    border-radius: 14px;
+  }
+}
+
+.primary {
+  min-width: 148px;
+}
+
+.secondary {
+  min-width: 132px;
+}
+
+@media only screen and (max-width: 640px) {
+  .new-chat-content {
+    width: min(100% - 28px, 440px);
+    padding-top: 28px;
   }
 
-  .mask-cards {
-    display: flex;
-    margin-top: 5vh;
-    margin-bottom: 20px;
-    animation: slide-in ease 0.3s;
-
-    .mask-card {
-      padding: 20px 10px;
-      border: var(--border-in-light);
-      box-shadow: var(--card-shadow);
-      border-radius: 14px;
-      background-color: var(--white);
-      transform: scale(1);
-
-      &:first-child {
-        transform: rotate(-15deg) translateY(5px);
-      }
-
-      &:last-child {
-        transform: rotate(15deg) translateY(5px);
-      }
-    }
-  }
-
-  .title {
-    font-size: 32px;
-    font-weight: bolder;
-    margin-bottom: 1vh;
-    animation: slide-in ease 0.35s;
-  }
-
-  .sub-title {
-    animation: slide-in ease 0.4s;
+  .new-chat-symbol {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
   }
 
   .actions {
-    margin-top: 5vh;
-    margin-bottom: 2vh;
-    animation: slide-in ease 0.45s;
-    display: flex;
-    justify-content: center;
-    font-size: 12px;
+    flex-direction: column;
 
-    .skip {
-      margin-left: 10px;
+    :global(.icon-button) {
+      width: 100%;
+      min-height: 50px;
     }
   }
 
-  .masks {
-    flex-grow: 1;
-    width: 100%;
-    overflow: auto;
-    align-items: center;
-    padding-top: 20px;
-
-    $linear: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0),
-      rgba(0, 0, 0, 1),
-      rgba(0, 0, 0, 0)
-    );
-
-    -webkit-mask-image: $linear;
-    mask-image: $linear;
-
-    animation: slide-in ease 0.5s;
-
-    .mask-row {
-      display: flex;
-      // justify-content: center;
-      margin-bottom: 10px;
-
-      @for $i from 1 to 10 {
-        &:nth-child(#{$i * 2}) {
-          margin-left: 50px;
-        }
-      }
-
-      .mask {
-        display: flex;
-        align-items: center;
-        padding: 10px 14px;
-        border: var(--border-in-light);
-        box-shadow: var(--card-shadow);
-        background-color: var(--white);
-        border-radius: 10px;
-        margin-right: 10px;
-        max-width: 8em;
-        transform: scale(1);
-        cursor: pointer;
-        transition: all ease 0.3s;
-
-        &:hover {
-          transform: translateY(-5px) scale(1.1);
-          z-index: 999;
-          border-color: var(--primary);
-        }
-
-        .mask-name {
-          margin-left: 10px;
-          font-size: 14px;
-        }
-      }
-    }
+  .primary,
+  .secondary {
+    min-width: 0;
   }
 }

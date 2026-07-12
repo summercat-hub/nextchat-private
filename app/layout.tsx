@@ -10,7 +10,16 @@ import { getServerSideConfig } from "./config/server";
 
 export const metadata: Metadata = {
   title: "Free Chat",
+  applicationName: "Free Chat",
   description: "简单、私密的 AI 聊天助手。",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
   appleWebApp: {
     title: "Free Chat",
     statusBarStyle: "default",
@@ -37,11 +46,6 @@ export default function RootLayout({
     <html lang="zh-CN">
       <head>
         <meta name="config" content={JSON.stringify(getClientConfig())} />
-        <link
-          rel="manifest"
-          href="/site.webmanifest"
-          crossOrigin="use-credentials"
-        ></link>
         <script src="/serviceWorkerRegister.js" defer></script>
       </head>
       <body>

@@ -174,6 +174,7 @@ function Screen() {
           className={clsx({
             [styles["sidebar-show"]]: isHome,
           })}
+          onMobileDismiss={() => navigate(Path.Chat)}
         />
         {isMobileScreen && isHome && (
           <button

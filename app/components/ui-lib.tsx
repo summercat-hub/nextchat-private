@@ -33,15 +33,62 @@ export function Popover(props: {
   content: JSX.Element;
   open?: boolean;
   onClose?: () => void;
+  className?: string;
+  contentClassName?: string;
+  maskClassName?: string;
+  contentRole?: React.AriaRole;
+  ariaLabel?: string;
 }) {
+  const { open, onClose } = props;
+  const contentRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    previousActiveElement.current =
+      document.activeElement as HTMLElement | null;
+    const focusTimer = window.setTimeout(() => {
+      contentRef.current
+        ?.querySelector<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )
+        ?.focus();
+    }, 0);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose?.();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("keydown", onKeyDown);
+      previousActiveElement.current?.focus();
+    };
+  }, [open, onClose]);
+
   return (
-    <div className={styles.popover}>
+    <div className={clsx(styles.popover, props.className)}>
       {props.children}
-      {props.open && (
-        <div className={styles["popover-mask"]} onClick={props.onClose}></div>
+      {open && (
+        <div
+          className={clsx(styles["popover-mask"], props.maskClassName)}
+          onClick={onClose}
+        ></div>
       )}
-      {props.open && (
-        <div className={styles["popover-content"]}>{props.content}</div>
+      {open && (
+        <div
+          ref={contentRef}
+          className={clsx(styles["popover-content"], props.contentClassName)}
+          role={props.contentRole}
+          aria-label={props.ariaLabel}
+        >
+          {props.content}
+        </div>
       )}
     </div>
   );
@@ -101,7 +148,7 @@ export function Loading() {
   return (
     <div
       style={{
-        height: "100vh",
+        height: "var(--full-height)",
         width: "100vw",
         display: "flex",
         alignItems: "center",

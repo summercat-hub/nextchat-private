@@ -34,6 +34,7 @@ import ConfirmIcon from "../icons/confirm.svg";
 import CloseIcon from "../icons/close.svg";
 import CancelIcon from "../icons/cancel.svg";
 import ImageIcon from "../icons/image.svg";
+import MenuIcon from "../icons/menu.svg";
 
 import LightIcon from "../icons/light.svg";
 import DarkIcon from "../icons/dark.svg";
@@ -93,6 +94,7 @@ import {
   List,
   ListItem,
   Modal,
+  Popover,
   Selector,
   showConfirm,
   showPrompt,
@@ -117,7 +119,6 @@ import { getClientConfig } from "../config/client";
 import { useAllModels } from "../utils/hooks";
 import { ClientApi, MultimodalContent } from "../client/api";
 import { createTTSPlayer } from "../utils/audio";
-import { MsEdgeTTS, OUTPUT_FORMAT } from "../utils/ms_edge_tts";
 
 import { isEmpty } from "lodash-es";
 import { getModelProvider } from "../utils/model";
@@ -1015,6 +1016,7 @@ function _Chat() {
   const fontFamily = config.fontFamily;
 
   const [showExport, setShowExport] = useState(false);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [userInput, setUserInput] = useState("");
@@ -1317,9 +1319,12 @@ function _Chat() {
       setSpeechLoading(true);
       ttsPlayer.init();
       let audioBuffer: ArrayBuffer;
-      const { markdownToTxt } = require("markdown-to-txt");
+      const { markdownToTxt } = await import("markdown-to-txt");
       const textContent = markdownToTxt(text);
       if (config.ttsConfig.engine !== DEFAULT_TTS_ENGINE) {
+        const { MsEdgeTTS, OUTPUT_FORMAT } = await import(
+          "../utils/ms_edge_tts"
+        );
         const edgeVoiceName = accessStore.edgeVoiceName();
         const tts = new MsEdgeTTS();
         await tts.setMetadata(
@@ -1719,71 +1724,89 @@ function _Chat() {
           <div
             className={clsx("window-header-title", styles["chat-body-title"])}
           >
-            <div
+            <button
+              type="button"
               className={clsx(
                 "window-header-main-title",
                 styles["chat-body-main-title"],
               )}
-              onClickCapture={() => setIsEditingMessage(true)}
+              title={Locale.Chat.Rename}
+              aria-label={Locale.Chat.Rename}
+              onClick={() => setIsEditingMessage(true)}
             >
               {!session.topic ? DEFAULT_TOPIC : session.topic}
-            </div>
+            </button>
             <div className="window-header-sub-title">
               {Locale.Chat.SubTitle(session.messages.length)}
             </div>
           </div>
           <div className="window-actions">
-            {!isMobileScreen && (
-              <div className="window-action-button">
-                <IconButton
-                  icon={<ReloadIcon />}
-                  bordered
-                  title={Locale.Chat.Actions.RefreshTitle}
-                  aria={Locale.Chat.Actions.RefreshTitle}
-                  onClick={() => {
-                    showToast(Locale.Chat.Actions.RefreshToast);
-                    chatStore.summarizeSession(true, session);
-                  }}
-                />
-              </div>
-            )}
-            {!isMobileScreen && (
-              <div className="window-action-button">
-                <IconButton
-                  icon={<RenameIcon />}
-                  bordered
-                  title={Locale.Chat.EditMessage.Title}
-                  aria={Locale.Chat.EditMessage.Title}
-                  onClick={() => setIsEditingMessage(true)}
-                />
-              </div>
-            )}
             <div className="window-action-button">
-              <IconButton
-                icon={<ExportIcon />}
-                bordered
-                title={Locale.Chat.Actions.Export}
-                aria={Locale.Chat.Actions.Export}
-                onClick={() => {
-                  setShowExport(true);
-                }}
-              />
-            </div>
-            {showMaxIcon && (
-              <div className="window-action-button">
+              <Popover
+                open={showHeaderMenu}
+                onClose={() => setShowHeaderMenu(false)}
+                contentClassName={styles["chat-header-popover-content"]}
+                maskClassName={styles["chat-header-popover-mask"]}
+                contentRole="group"
+                ariaLabel="会话操作"
+                content={
+                  <div className={styles["chat-header-menu"]}>
+                    <IconButton
+                      icon={<ReloadIcon />}
+                      text={Locale.Chat.Actions.RefreshTitle}
+                      className={styles["chat-header-menu-item"]}
+                      onClick={() => {
+                        setShowHeaderMenu(false);
+                        showToast(Locale.Chat.Actions.RefreshToast);
+                        chatStore.summarizeSession(true, session);
+                      }}
+                    />
+                    <IconButton
+                      icon={<RenameIcon />}
+                      text={Locale.Chat.Rename}
+                      className={styles["chat-header-menu-item"]}
+                      onClick={() => {
+                        setShowHeaderMenu(false);
+                        setIsEditingMessage(true);
+                      }}
+                    />
+                    <IconButton
+                      icon={<ExportIcon />}
+                      text={Locale.Chat.Actions.Export}
+                      className={styles["chat-header-menu-item"]}
+                      onClick={() => {
+                        setShowHeaderMenu(false);
+                        setShowExport(true);
+                      }}
+                    />
+                    {showMaxIcon && (
+                      <IconButton
+                        icon={config.tightBorder ? <MinIcon /> : <MaxIcon />}
+                        text={Locale.Chat.Actions.FullScreen}
+                        className={styles["chat-header-menu-item"]}
+                        onClick={() => {
+                          setShowHeaderMenu(false);
+                          config.update(
+                            (config) =>
+                              (config.tightBorder = !config.tightBorder),
+                          );
+                        }}
+                      />
+                    )}
+                  </div>
+                }
+              >
                 <IconButton
-                  icon={config.tightBorder ? <MinIcon /> : <MaxIcon />}
+                  icon={<MenuIcon />}
                   bordered
-                  title={Locale.Chat.Actions.FullScreen}
-                  aria={Locale.Chat.Actions.FullScreen}
-                  onClick={() => {
-                    config.update(
-                      (config) => (config.tightBorder = !config.tightBorder),
-                    );
-                  }}
+                  title="更多操作"
+                  aria="更多操作"
+                  ariaExpanded={showHeaderMenu}
+                  ariaHasPopup="menu"
+                  onClick={() => setShowHeaderMenu((open) => !open)}
                 />
-              </div>
-            )}
+              </Popover>
+            </div>
           </div>
 
           <PromptToast

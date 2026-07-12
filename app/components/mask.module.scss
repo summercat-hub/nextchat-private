@@ -82,7 +82,7 @@
       .mask-actions {
         display: flex;
         flex-wrap: nowrap;
-        transition: all ease 0.3s;
+        transition: opacity var(--motion-fast) var(--ease-out);
       }
 
       @media screen and (max-width: 640px) {

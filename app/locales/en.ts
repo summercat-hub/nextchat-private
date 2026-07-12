@@ -785,12 +785,13 @@ const en: LocaleType = {
   },
   NewChat: {
     Return: "Return",
-    Skip: "Just Start",
-    Title: "Pick a Mask",
-    SubTitle: "Chat with the Soul behind the Mask",
-    More: "Find More",
-    NotShow: "Never Show Again",
-    ConfirmNoShow: "Confirm to disable？You can enable it in settings later.",
+    Skip: "Start Chatting",
+    Title: "Start a New Chat",
+    SubTitle: "Start immediately, or choose a role suited to the task.",
+    More: "Choose a Role",
+    NotShow: "Skip This Next Time",
+    ConfirmNoShow:
+      "Skip this page in the future? You can still choose a role from the chat list.",
   },
 
   UI: {

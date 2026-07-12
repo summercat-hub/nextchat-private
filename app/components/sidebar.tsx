@@ -136,6 +136,7 @@ export function useDragSideBar() {
 export function SideBarContainer(props: {
   children: React.ReactNode;
   onDragStart: (e: MouseEvent) => void;
+  onMobileDismiss?: () => void;
   shouldNarrow: boolean;
   className?: string;
 }) {
@@ -144,16 +145,118 @@ export function SideBarContainer(props: {
     () => isIOS() && isMobileScreen,
     [isMobileScreen],
   );
-  const { children, className, onDragStart, shouldNarrow } = props;
+  const { children, className, onDragStart, onMobileDismiss, shouldNarrow } =
+    props;
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const gestureRef = useRef({
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    lastTime: 0,
+    dragging: false,
+  });
+
+  const resetGesture = () => {
+    gestureRef.current = {
+      pointerId: -1,
+      startX: 0,
+      startY: 0,
+      lastX: 0,
+      lastTime: 0,
+      dragging: false,
+    };
+  };
+
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMobileScreen || event.button !== 0) return;
+
+    gestureRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      lastTime: event.timeStamp,
+      dragging: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const gesture = gestureRef.current;
+    const sidebar = sidebarRef.current;
+    if (!isMobileScreen || !sidebar || gesture.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const deltaX = event.clientX - gesture.startX;
+    const deltaY = event.clientY - gesture.startY;
+    if (!gesture.dragging) {
+      if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) return;
+      if (Math.abs(deltaY) >= Math.abs(deltaX) || deltaX > 0) {
+        resetGesture();
+        return;
+      }
+      gesture.dragging = true;
+    }
+
+    event.preventDefault();
+    const width = sidebar.getBoundingClientRect().width;
+    const translatedX = Math.max(-width, Math.min(0, deltaX));
+    sidebar.style.transition = "none";
+    sidebar.style.transform = `translateX(${translatedX}px)`;
+    gesture.lastX = event.clientX;
+    gesture.lastTime = event.timeStamp;
+  };
+
+  const finishPointerGesture = (event: React.PointerEvent<HTMLDivElement>) => {
+    const gesture = gestureRef.current;
+    const sidebar = sidebarRef.current;
+    if (!sidebar || gesture.pointerId !== event.pointerId) return;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (!gesture.dragging) {
+      resetGesture();
+      return;
+    }
+
+    const deltaX = event.clientX - gesture.startX;
+    const elapsed = Math.max(1, event.timeStamp - gesture.lastTime);
+    const velocityX = ((event.clientX - gesture.lastX) / elapsed) * 1000;
+    const width = sidebar.getBoundingClientRect().width;
+    const shouldDismiss = deltaX < -width * 0.28 || velocityX < -520;
+
+    sidebar.style.transition = "transform var(--motion-normal) var(--ease-out)";
+    sidebar.style.transform = shouldDismiss
+      ? "translateX(-100%)"
+      : "translateX(0)";
+
+    window.setTimeout(() => {
+      sidebar.style.removeProperty("transition");
+      sidebar.style.removeProperty("transform");
+      if (shouldDismiss) onMobileDismiss?.();
+    }, 260);
+    resetGesture();
+  };
+
   return (
     <div
+      ref={sidebarRef}
       className={clsx(styles.sidebar, className, {
         [styles["narrow-sidebar"]]: shouldNarrow,
       })}
       style={{
-        // #3016 disable transition on ios mobile screen
+        // #3016 disable the idle transition on iOS; direct dragging still
+        // supplies its own release transition.
         transition: isMobileScreen && isIOSMobile ? "none" : undefined,
       }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={finishPointerGesture}
+      onPointerCancel={finishPointerGesture}
     >
       {children}
       <div
@@ -221,7 +324,10 @@ export function SideBarTail(props: {
   );
 }
 
-export function SideBar(props: { className?: string }) {
+export function SideBar(props: {
+  className?: string;
+  onMobileDismiss?: () => void;
+}) {
   useHotKey();
   const { onDragStart, shouldNarrow } = useDragSideBar();
   const navigate = useNavigate();

@@ -20,9 +20,12 @@ export function IconButton(props: {
   autoFocus?: boolean;
   style?: CSSProperties;
   aria?: string;
+  ariaExpanded?: boolean;
+  ariaHasPopup?: React.AriaAttributes["aria-haspopup"];
 }) {
   return (
     <button
+      type="button"
       className={clsx(
         "clickable",
         styles["icon-button"],
@@ -41,6 +44,8 @@ export function IconButton(props: {
       autoFocus={props.autoFocus}
       style={props.style}
       aria-label={props.aria}
+      aria-expanded={props.ariaExpanded}
+      aria-haspopup={props.ariaHasPopup}
     >
       {props.icon && (
         <div
