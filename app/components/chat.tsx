@@ -422,50 +422,19 @@ export function ChatAction(props: {
   onClick: () => void;
   active?: boolean;
 }) {
-  const iconRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState({
-    full: 16,
-    icon: 16,
-  });
-
-  function updateWidth() {
-    if (!iconRef.current || !textRef.current) return;
-    const getWidth = (dom: HTMLDivElement) => dom.getBoundingClientRect().width;
-    const textWidth = getWidth(textRef.current);
-    const iconWidth = getWidth(iconRef.current);
-    setWidth({
-      full: textWidth + iconWidth,
-      icon: iconWidth,
-    });
-  }
-
   return (
     <button
       type="button"
       aria-label={props.text}
+      title={props.text}
       className={clsx(
         styles["chat-input-action"],
         props.active && styles["chat-input-action-active"],
       )}
-      onClick={() => {
-        props.onClick();
-        setTimeout(updateWidth, 1);
-      }}
-      onMouseEnter={updateWidth}
-      onTouchStart={updateWidth}
-      style={
-        {
-          "--icon-width": `${width.icon}px`,
-          "--full-width": `${width.full}px`,
-        } as React.CSSProperties
-      }
+      onClick={props.onClick}
     >
-      <div ref={iconRef} className={styles["icon"]}>
+      <div className={styles["icon"]} aria-hidden="true">
         {props.icon}
-      </div>
-      <div className={styles["text"]} ref={textRef}>
-        {props.text}
       </div>
     </button>
   );

@@ -41,10 +41,14 @@
   width: var(--sidebar-width);
   box-sizing: border-box;
   padding: 20px;
-  background-color: var(--second);
+  background: var(--sidebar-material);
   display: flex;
   flex-direction: column;
-  box-shadow: inset -1px 0 0 var(--separator);
+  box-shadow:
+    inset -1px 0 0 var(--separator),
+    inset 1px 0 0 var(--material-highlight);
+  backdrop-filter: blur(28px) saturate(155%);
+  -webkit-backdrop-filter: blur(28px) saturate(155%);
   position: relative;
   transition: width var(--motion-press) ease-out;
 

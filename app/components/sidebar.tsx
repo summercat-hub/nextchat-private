@@ -6,7 +6,6 @@ import { IconButton } from "./button";
 import SettingsIcon from "../icons/settings.svg";
 import ChatGptIcon from "../icons/chatgpt.svg";
 import AddIcon from "../icons/add.svg";
-import DeleteIcon from "../icons/delete.svg";
 import McpIcon from "../icons/mcp.svg";
 import DragIcon from "../icons/drag.svg";
 
@@ -25,7 +24,6 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { isIOS, useCompactScreen, useMobileScreen } from "../utils";
 import dynamic from "next/dynamic";
-import { showConfirm } from "./ui-lib";
 import clsx from "clsx";
 import { isMcpEnabled } from "../mcp/actions";
 
@@ -382,27 +380,15 @@ export function SideBar(props: {
       </SideBarBody>
       <SideBarTail
         primaryAction={
-          <>
-            <div className={clsx(styles["sidebar-action"], styles.mobile)}>
+          <div className={styles["sidebar-action"]}>
+            <Link to={Path.Settings}>
               <IconButton
-                icon={<DeleteIcon />}
-                onClick={async () => {
-                  if (await showConfirm(Locale.Home.DeleteChat)) {
-                    chatStore.deleteSession(chatStore.currentSessionIndex);
-                  }
-                }}
+                aria={Locale.Settings.Title}
+                icon={<SettingsIcon />}
+                shadow
               />
-            </div>
-            <div className={styles["sidebar-action"]}>
-              <Link to={Path.Settings}>
-                <IconButton
-                  aria={Locale.Settings.Title}
-                  icon={<SettingsIcon />}
-                  shadow
-                />
-              </Link>
-            </div>
-          </>
+            </Link>
+          </div>
         }
         secondaryAction={
           <IconButton
