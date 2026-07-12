@@ -212,7 +212,7 @@ function shouldIgnoreDrawerGesture(target: EventTarget | null) {
 }
 
 function getDrawerDistance() {
-  return Math.min(window.innerWidth * 0.88, 360);
+  return Math.min(window.innerWidth * 0.74, 320);
 }
 
 function clampDrawerOffset(value: number, maxDistance: number) {

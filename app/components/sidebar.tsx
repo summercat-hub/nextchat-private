@@ -118,7 +118,7 @@ export function useDragSideBar() {
       ? NARROW_SIDEBAR_WIDTH
       : limit(config.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH);
     const sideBarWidth = isMobileScreen
-      ? "min(88vw, 360px)"
+      ? "min(74vw, 320px)"
       : isCompactScreen
       ? "240px"
       : `${barWidth}px`;

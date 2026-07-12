@@ -128,12 +128,15 @@
     min-width: unset;
     max-height: unset;
     min-width: unset;
+    position: relative;
+    isolation: isolate;
     border: 0;
     border-radius: 0;
+    background: var(--sidebar-material);
   }
 
   .sidebar {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     z-index: 0;
@@ -142,9 +145,7 @@
     padding-bottom: calc(14px + env(safe-area-inset-bottom));
     transform: none;
     transition: none;
-    box-shadow:
-      inset -1px 0 0 var(--separator),
-      10px 0 30px rgba(0, 0, 0, 0.08);
+    box-shadow: inset -1px 0 0 var(--separator);
     touch-action: pan-y;
   }
 
@@ -164,11 +165,11 @@
   }
 
   .drawer-open {
-    border-top-left-radius: 18px;
-    border-bottom-left-radius: 18px;
+    border-top-left-radius: 28px;
+    border-bottom-left-radius: 28px;
     box-shadow:
-      -18px 0 34px rgba(0, 0, 0, 0.18),
-      -1px 0 0 rgba(255, 255, 255, 0.35);
+      -16px 0 34px rgba(0, 0, 0, 0.16),
+      -1px 0 0 rgba(255, 255, 255, 0.28);
   }
 
   .drawer-dragging .window-content {
