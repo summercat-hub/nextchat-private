@@ -147,8 +147,15 @@ export function SideBarContainer(props: {
       className={clsx(styles.sidebar, className, {
         [styles["narrow-sidebar"]]: shouldNarrow,
       })}
-      onClick={() => {
-        if (isMobileScreen) onMobileDismiss?.();
+      onClick={(event) => {
+        if (!isMobileScreen) return;
+
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+
+        if (target.closest("button, a")) {
+          onMobileDismiss?.();
+        }
       }}
     >
       {children}
