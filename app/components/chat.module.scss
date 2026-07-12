@@ -55,6 +55,7 @@
   }
 
   .chat-input-action {
+    position: relative;
     width: 40px;
     height: 40px;
     flex: 0 0 40px;
@@ -92,17 +93,22 @@
     }
 
     .icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
       width: 18px;
       height: 18px;
-      flex: 0 0 18px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      line-height: 0;
+      transform: translate(-50%, -50%) translate(0.5px, 0.5px);
 
       svg {
         width: 18px;
         height: 18px;
         display: block;
+        overflow: visible;
       }
 
       svg path[style*="fill:#333"] {

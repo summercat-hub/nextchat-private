@@ -107,7 +107,9 @@
 }
 
 .mobile,
-.sidebar-backdrop {
+.sidebar-backdrop,
+.edge-swipe-zone,
+.edge-swipe-preview-backdrop {
   display: none;
 }
 
@@ -149,6 +151,43 @@
 
   .sidebar-show {
     transform: translateX(0);
+  }
+
+  .edge-swiping .sidebar,
+  .edge-settling .sidebar {
+    transform: translateX(calc(-100% + var(--edge-swipe-x)));
+  }
+
+  .edge-swiping .sidebar {
+    transition: none !important;
+  }
+
+  .edge-settling .sidebar {
+    transition: transform 220ms var(--ease-out) !important;
+  }
+
+  .edge-swipe-zone {
+    display: block;
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 58px);
+    bottom: calc(env(safe-area-inset-bottom) + 120px);
+    left: 8px;
+    z-index: 1002;
+    width: 28px;
+    touch-action: pan-y;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .edge-swipe-preview-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: var(--scrim);
+    pointer-events: none;
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+    transition: opacity 60ms linear;
   }
 
   .sidebar-drag {

@@ -173,6 +173,207 @@ export function Modal(props: ModalProps) {
   const titleId = useId();
   const onClose = props.onClose;
   const isMobileScreen = useMobileScreen();
+  const [sheetOffset, setSheetOffset] = useState(0);
+  const [isSheetDragging, setIsSheetDragging] = useState(false);
+  const sheetOffsetRef = useRef(0);
+  const sheetCloseTimer = useRef<number | null>(null);
+  const sheetGesture = useRef({
+    pointerId: -1,
+    startY: 0,
+    lastY: 0,
+    lastTime: 0,
+    velocityY: 0,
+  });
+
+  const updateSheetOffset = useCallback((nextOffset: number) => {
+    const normalizedOffset = Math.max(0, nextOffset);
+    sheetOffsetRef.current = normalizedOffset;
+    setSheetOffset(normalizedOffset);
+  }, []);
+
+  const startSheetDrag = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      if (!isMobileScreen || event.button !== 0) return;
+
+      const target = event.target as HTMLElement;
+      if (
+        target.closest(`.${styles["modal-header-action"]}`) ||
+        target.closest("input, select, textarea, a")
+      ) {
+        return;
+      }
+
+      event.currentTarget.setPointerCapture(event.pointerId);
+      const now = performance.now();
+      sheetGesture.current = {
+        pointerId: event.pointerId,
+        startY: event.clientY,
+        lastY: event.clientY,
+        lastTime: now,
+        velocityY: 0,
+      };
+      setIsSheetDragging(true);
+    },
+    [isMobileScreen],
+  );
+
+  const moveSheetDrag = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      const gesture = sheetGesture.current;
+      if (gesture.pointerId !== event.pointerId) return;
+
+      const now = performance.now();
+      const deltaTime = Math.max(1, now - gesture.lastTime);
+      gesture.velocityY = ((event.clientY - gesture.lastY) / deltaTime) * 1000;
+      gesture.lastY = event.clientY;
+      gesture.lastTime = now;
+
+      const offset = event.clientY - gesture.startY;
+      if (offset > 0) {
+        event.preventDefault();
+        updateSheetOffset(offset);
+      } else {
+        updateSheetOffset(offset * 0.12);
+      }
+    },
+    [updateSheetOffset],
+  );
+
+  const settleSheetDrag = useCallback(
+    (cancelled = false) => {
+      const gesture = sheetGesture.current;
+      gesture.pointerId = -1;
+      setIsSheetDragging(false);
+
+      const modalHeight =
+        modalRef.current?.getBoundingClientRect().height ?? 600;
+      const shouldClose =
+        !cancelled &&
+        (sheetOffsetRef.current > Math.min(170, modalHeight * 0.28) ||
+          (gesture.velocityY > 850 && sheetOffsetRef.current > 36));
+
+      if (shouldClose) {
+        updateSheetOffset(modalHeight + 24);
+        sheetCloseTimer.current = window.setTimeout(() => onClose?.(), 220);
+      } else {
+        updateSheetOffset(0);
+      }
+    },
+    [onClose, updateSheetOffset],
+  );
+
+  const finishSheetDrag = useCallback(
+    (event: React.PointerEvent<HTMLElement>, cancelled = false) => {
+      const gesture = sheetGesture.current;
+      if (gesture.pointerId !== event.pointerId) return;
+
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      settleSheetDrag(cancelled);
+    },
+    [settleSheetDrag],
+  );
+
+  useEffect(() => {
+    if (!isMobileScreen) return;
+
+    const modal = modalRef.current;
+    const content = modal?.querySelector<HTMLElement>(
+      `.${styles["modal-content"]}`,
+    );
+    if (!modal || !content) return;
+
+    let isCandidate = false;
+    let isDraggingContent = false;
+    let startX = 0;
+    let startY = 0;
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return;
+      const target = event.target as HTMLElement;
+      if (
+        target.closest(`.${styles["modal-header"]}`) ||
+        target.closest(`.${styles["modal-grabber"]}`) ||
+        target.closest("button, input, select, textarea, a") ||
+        content.scrollTop > 0
+      ) {
+        return;
+      }
+
+      const touch = event.touches[0];
+      const now = performance.now();
+      startX = touch.clientX;
+      startY = touch.clientY;
+      isCandidate = true;
+      isDraggingContent = false;
+      sheetGesture.current = {
+        pointerId: -2,
+        startY: touch.clientY,
+        lastY: touch.clientY,
+        lastTime: now,
+        velocityY: 0,
+      };
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (!isCandidate || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+
+      if (!isDraggingContent) {
+        if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 10) return;
+        if (deltaY <= 0 || Math.abs(deltaX) > deltaY * 0.8) {
+          isCandidate = false;
+          return;
+        }
+        if (content.scrollTop > 0) {
+          isCandidate = false;
+          return;
+        }
+        isDraggingContent = true;
+        setIsSheetDragging(true);
+      }
+
+      event.preventDefault();
+      const now = performance.now();
+      const gesture = sheetGesture.current;
+      const deltaTime = Math.max(1, now - gesture.lastTime);
+      gesture.velocityY = ((touch.clientY - gesture.lastY) / deltaTime) * 1000;
+      gesture.lastY = touch.clientY;
+      gesture.lastTime = now;
+      updateSheetOffset(deltaY);
+    };
+
+    const onTouchEnd = () => {
+      if (isDraggingContent) {
+        settleSheetDrag(false);
+      }
+      isCandidate = false;
+      isDraggingContent = false;
+    };
+
+    const onTouchCancel = () => {
+      if (isDraggingContent) {
+        settleSheetDrag(true);
+      }
+      isCandidate = false;
+      isDraggingContent = false;
+    };
+
+    modal.addEventListener("touchstart", onTouchStart, { passive: true });
+    modal.addEventListener("touchmove", onTouchMove, { passive: false });
+    modal.addEventListener("touchend", onTouchEnd);
+    modal.addEventListener("touchcancel", onTouchCancel);
+
+    return () => {
+      modal.removeEventListener("touchstart", onTouchStart);
+      modal.removeEventListener("touchmove", onTouchMove);
+      modal.removeEventListener("touchend", onTouchEnd);
+      modal.removeEventListener("touchcancel", onTouchCancel);
+    };
+  }, [isMobileScreen, settleSheetDrag, updateSheetOffset]);
 
   useEffect(() => {
     const previousActiveElement = document.activeElement as HTMLElement | null;
@@ -220,6 +421,9 @@ export function Modal(props: ModalProps) {
 
     return () => {
       window.removeEventListener("keydown", onKeyDown);
+      if (sheetCloseTimer.current !== null) {
+        window.clearTimeout(sheetCloseTimer.current);
+      }
       previousActiveElement?.focus();
     };
   }, [onClose]);
@@ -235,9 +439,36 @@ export function Modal(props: ModalProps) {
       tabIndex={-1}
       className={clsx(styles["modal-container"], {
         [styles["modal-container-max"]]: isMax,
+        [styles["modal-container-dragging"]]: isSheetDragging,
       })}
+      style={
+        isMobileScreen
+          ? ({
+              "--sheet-offset": `${sheetOffset}px`,
+              "--sheet-opacity": `${Math.max(0.72, 1 - sheetOffset / 1200)}`,
+            } as CSSProperties)
+          : undefined
+      }
     >
-      <div className={styles["modal-header"]}>
+      {isMobileScreen && (
+        <button
+          type="button"
+          className={styles["modal-grabber"]}
+          aria-label="向下拖动关闭"
+          tabIndex={-1}
+          onPointerDown={startSheetDrag}
+          onPointerMove={moveSheetDrag}
+          onPointerUp={(event) => finishSheetDrag(event)}
+          onPointerCancel={(event) => finishSheetDrag(event, true)}
+        />
+      )}
+      <div
+        className={styles["modal-header"]}
+        onPointerDown={startSheetDrag}
+        onPointerMove={moveSheetDrag}
+        onPointerUp={(event) => finishSheetDrag(event)}
+        onPointerCancel={(event) => finishSheetDrag(event, true)}
+      >
         <div id={titleId} className={styles["modal-title"]}>
           {props.title}
         </div>

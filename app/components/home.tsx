@@ -2,7 +2,13 @@
 
 require("../polyfill");
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import styles from "./home.module.scss";
 
 import BotIcon from "../icons/bot.svg";
@@ -154,8 +160,137 @@ function Screen() {
   const isSdNew = location.pathname === Path.SdNew;
 
   const isMobileScreen = useMobileScreen();
+  const [edgeSwipeX, setEdgeSwipeX] = useState(0);
+  const [isEdgeSwiping, setIsEdgeSwiping] = useState(false);
+  const [isEdgeSettling, setIsEdgeSettling] = useState(false);
+  const edgeSwipeTimer = useRef<number | null>(null);
+  const edgeSwipe = useRef({
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    lastTime: 0,
+    velocityX: 0,
+    distance: 0,
+    maxDistance: 1,
+    directionLocked: false,
+    cancelled: false,
+  });
   const shouldTightBorder =
     getClientConfig()?.isApp || (config.tightBorder && !isMobileScreen);
+
+  useEffect(() => {
+    return () => {
+      if (edgeSwipeTimer.current !== null) {
+        window.clearTimeout(edgeSwipeTimer.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname !== Path.Chat) {
+      setEdgeSwipeX(0);
+      setIsEdgeSwiping(false);
+      setIsEdgeSettling(false);
+    }
+  }, [location.pathname]);
+
+  const startEdgeSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (
+      !isMobileScreen ||
+      location.pathname !== Path.Chat ||
+      event.pointerType === "mouse" ||
+      event.button !== 0
+    ) {
+      return;
+    }
+
+    const maxDistance = Math.min(window.innerWidth * 0.88, 360);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    edgeSwipe.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      lastTime: performance.now(),
+      velocityX: 0,
+      distance: 0,
+      maxDistance,
+      directionLocked: false,
+      cancelled: false,
+    };
+    setIsEdgeSettling(false);
+    setIsEdgeSwiping(true);
+  };
+
+  const moveEdgeSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const gesture = edgeSwipe.current;
+    if (gesture.pointerId !== event.pointerId || gesture.cancelled) return;
+
+    const deltaX = event.clientX - gesture.startX;
+    const deltaY = event.clientY - gesture.startY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (!gesture.directionLocked) {
+      if (Math.max(absX, absY) < 10) return;
+      if (deltaX <= 0 || absY > absX * 0.8) {
+        gesture.cancelled = true;
+        setIsEdgeSwiping(false);
+        return;
+      }
+      gesture.directionLocked = true;
+    }
+
+    event.preventDefault();
+    const now = performance.now();
+    const deltaTime = Math.max(1, now - gesture.lastTime);
+    gesture.velocityX = ((event.clientX - gesture.lastX) / deltaTime) * 1000;
+    gesture.lastX = event.clientX;
+    gesture.lastTime = now;
+    gesture.distance = Math.min(gesture.maxDistance, Math.max(0, deltaX));
+    setEdgeSwipeX(gesture.distance);
+  };
+
+  const finishEdgeSwipe = (
+    event: ReactPointerEvent<HTMLDivElement>,
+    cancelled = false,
+  ) => {
+    const gesture = edgeSwipe.current;
+    if (gesture.pointerId !== event.pointerId) return;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    gesture.pointerId = -1;
+    setIsEdgeSwiping(false);
+
+    const shouldOpen =
+      !cancelled &&
+      !gesture.cancelled &&
+      gesture.distance > 42 &&
+      (gesture.distance > gesture.maxDistance * 0.28 ||
+        gesture.velocityX > 650);
+
+    setIsEdgeSettling(true);
+    setEdgeSwipeX(shouldOpen ? gesture.maxDistance : 0);
+
+    if (edgeSwipeTimer.current !== null) {
+      window.clearTimeout(edgeSwipeTimer.current);
+    }
+    edgeSwipeTimer.current = window.setTimeout(() => {
+      if (shouldOpen) {
+        navigate(Path.Home);
+      }
+      setEdgeSwipeX(0);
+      setIsEdgeSettling(false);
+    }, 220);
+  };
+
+  const edgeSwipeProgress = Math.min(
+    1,
+    edgeSwipeX / Math.max(1, edgeSwipe.current.maxDistance),
+  );
 
   if (isArtifact) {
     return (
@@ -170,6 +305,23 @@ function Screen() {
     if (isSdNew) return <Sd />;
     return (
       <>
+        {isMobileScreen && location.pathname === Path.Chat && (
+          <div
+            className={styles["edge-swipe-zone"]}
+            aria-hidden="true"
+            onPointerDown={startEdgeSwipe}
+            onPointerMove={moveEdgeSwipe}
+            onPointerUp={(event) => finishEdgeSwipe(event)}
+            onPointerCancel={(event) => finishEdgeSwipe(event, true)}
+          />
+        )}
+        {isMobileScreen && edgeSwipeX > 0 && (
+          <div
+            className={styles["edge-swipe-preview-backdrop"]}
+            aria-hidden="true"
+            style={{ opacity: edgeSwipeProgress * 0.72 }}
+          />
+        )}
         <SideBar
           className={clsx({
             [styles["sidebar-show"]]: isHome,
@@ -205,7 +357,14 @@ function Screen() {
       className={clsx(styles.container, {
         [styles["tight-container"]]: shouldTightBorder,
         [styles["rtl-screen"]]: getLang() === "ar",
+        [styles["edge-swiping"]]: isEdgeSwiping,
+        [styles["edge-settling"]]: isEdgeSettling,
       })}
+      style={
+        {
+          "--edge-swipe-x": `${edgeSwipeX}px`,
+        } as CSSProperties
+      }
     >
       {renderContent()}
     </div>
