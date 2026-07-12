@@ -3,11 +3,12 @@
 require("../polyfill");
 
 import {
+  forwardRef,
   useEffect,
   useRef,
   useState,
   type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
+  type HTMLAttributes,
 } from "react";
 import styles from "./home.module.scss";
 
@@ -27,7 +28,6 @@ import {
   Route,
   Routes,
   useLocation,
-  useNavigate,
 } from "react-router-dom";
 import { SideBar } from "./sidebar";
 import { useAppConfig } from "../store/config";
@@ -141,37 +141,152 @@ const useHasHydrated = () => {
   return hasHydrated;
 };
 
-export function WindowContent(props: { children: React.ReactNode }) {
+export const WindowContent = forwardRef<
+  HTMLDivElement,
+  { children: React.ReactNode } & HTMLAttributes<HTMLDivElement>
+>(function WindowContent(props, ref) {
+  const { children, className, ...rest } = props;
+
   return (
-    <div className={styles["window-content"]} id={SlotID.AppBody}>
-      {props?.children}
+    <div
+      ref={ref}
+      className={clsx(styles["window-content"], className)}
+      id={SlotID.AppBody}
+      {...rest}
+    >
+      {children}
     </div>
   );
+});
+
+const MOBILE_DRAWER_EVENT = "nextchat:open-mobile-drawer";
+const DRAWER_INTENT_THRESHOLD = 11;
+const DRAWER_INTENT_RATIO = 1.25;
+const DRAWER_VELOCITY_THRESHOLD = 650;
+
+function isSelectionActive() {
+  const selection = window.getSelection?.();
+  return !!selection && selection.type === "Range" && !selection.isCollapsed;
+}
+
+function isHorizontallyScrollable(element: HTMLElement | null) {
+  let node = element;
+  while (node && node !== document.body) {
+    const style = window.getComputedStyle(node);
+    const canScrollX =
+      /(auto|scroll)/.test(style.overflowX) &&
+      node.scrollWidth > node.clientWidth + 1;
+    if (canScrollX) return true;
+    node = node.parentElement;
+  }
+  return false;
+}
+
+function shouldIgnoreDrawerGesture(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return true;
+  if (isSelectionActive()) return true;
+
+  const ignoredTarget = target.closest(
+    [
+      "input",
+      "textarea",
+      "select",
+      "button",
+      "a",
+      "[contenteditable]",
+      "[role='dialog']",
+      "dialog",
+      "[popover]",
+      ".modal-mask",
+      "code",
+      "pre",
+      "img",
+      "video",
+      "audio",
+      "canvas",
+      "iframe",
+    ].join(","),
+  );
+
+  return !!ignoredTarget || isHorizontallyScrollable(target);
+}
+
+function getDrawerDistance() {
+  return Math.min(window.innerWidth * 0.88, 360);
+}
+
+function clampDrawerOffset(value: number, maxDistance: number) {
+  return Math.min(maxDistance, Math.max(0, value));
+}
+
+function projectDrawerOffset(offset: number, velocityX: number) {
+  const decelerationRate = 0.995;
+  return (
+    offset + (velocityX / 1000) * (decelerationRate / (1 - decelerationRate))
+  );
+}
+
+function getPresentedDrawerOffset(
+  element: HTMLElement | null,
+  maxDistance: number,
+  fallback: number,
+) {
+  if (!element) return clampDrawerOffset(fallback, maxDistance);
+
+  const transform = window.getComputedStyle(element).transform;
+  if (!transform || transform === "none") {
+    return clampDrawerOffset(fallback, maxDistance);
+  }
+
+  try {
+    return clampDrawerOffset(new DOMMatrixReadOnly(transform).m41, maxDistance);
+  } catch {
+    const matrixValues = transform.match(/matrix.*\((.+)\)/)?.[1]?.split(",");
+    const translateX = matrixValues ? Number(matrixValues[4]) : NaN;
+    return clampDrawerOffset(
+      Number.isFinite(translateX) ? translateX : fallback,
+      maxDistance,
+    );
+  }
+}
+
+function findTouch(touches: TouchList, identifier: number) {
+  for (let i = 0; i < touches.length; i += 1) {
+    const touch = touches.item(i);
+    if (touch?.identifier === identifier) return touch;
+  }
 }
 
 function Screen() {
   const config = useAppConfig();
   const location = useLocation();
-  const navigate = useNavigate();
   const isArtifact = location.pathname.includes(Path.Artifacts);
-  const isHome = location.pathname === Path.Home;
   const isAuth = location.pathname === Path.Auth;
   const isSd = location.pathname === Path.Sd;
   const isSdNew = location.pathname === Path.SdNew;
 
   const isMobileScreen = useMobileScreen();
-  const [edgeSwipeX, setEdgeSwipeX] = useState(0);
-  const [isEdgeSwiping, setIsEdgeSwiping] = useState(false);
-  const [isEdgeSettling, setIsEdgeSettling] = useState(false);
-  const edgeSwipeTimer = useRef<number | null>(null);
-  const edgeSwipe = useRef({
-    pointerId: -1,
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerOffset, setDrawerOffset] = useState(0);
+  const [isDrawerDragging, setIsDrawerDragging] = useState(false);
+  const [isDrawerSettling, setIsDrawerSettling] = useState(false);
+  const drawerTimer = useRef<number | null>(null);
+  const suppressDrawerClick = useRef(false);
+  const windowContentRef = useRef<HTMLDivElement>(null);
+  const latestDrawerState = useRef({
+    isOpen: false,
+    offset: 0,
+    pathname: Path.Chat as string,
+  });
+  const drawerGesture = useRef({
+    touchId: -1,
     startX: 0,
     startY: 0,
+    startOffset: 0,
     lastX: 0,
     lastTime: 0,
     velocityX: 0,
-    distance: 0,
+    offset: 0,
     maxDistance: 1,
     directionLocked: false,
     cancelled: false,
@@ -180,117 +295,252 @@ function Screen() {
     getClientConfig()?.isApp || (config.tightBorder && !isMobileScreen);
 
   useEffect(() => {
+    latestDrawerState.current = {
+      isOpen: isDrawerOpen,
+      offset: drawerOffset,
+      pathname: location.pathname,
+    };
+  });
+
+  useEffect(() => {
     return () => {
-      if (edgeSwipeTimer.current !== null) {
-        window.clearTimeout(edgeSwipeTimer.current);
+      if (drawerTimer.current !== null) {
+        window.clearTimeout(drawerTimer.current);
       }
     };
   }, []);
 
   useEffect(() => {
-    if (location.pathname !== Path.Chat) {
-      setEdgeSwipeX(0);
-      setIsEdgeSwiping(false);
-      setIsEdgeSettling(false);
-    }
-  }, [location.pathname]);
-
-  const startEdgeSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (
-      !isMobileScreen ||
-      location.pathname !== Path.Chat ||
-      event.pointerType === "mouse" ||
-      event.button !== 0
-    ) {
+    if (!isMobileScreen) {
+      setIsDrawerOpen(false);
+      setDrawerOffset(0);
+      setIsDrawerDragging(false);
+      setIsDrawerSettling(false);
       return;
     }
 
-    const maxDistance = Math.min(window.innerWidth * 0.88, 360);
-    event.currentTarget.setPointerCapture(event.pointerId);
-    edgeSwipe.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      lastX: event.clientX,
-      lastTime: performance.now(),
-      velocityX: 0,
-      distance: 0,
-      maxDistance,
-      directionLocked: false,
-      cancelled: false,
-    };
-    setIsEdgeSettling(false);
-    setIsEdgeSwiping(true);
+    const maxDistance = getDrawerDistance();
+    if (location.pathname === Path.Home) {
+      setIsDrawerOpen(true);
+      setDrawerOffset(maxDistance);
+    } else if (location.pathname !== Path.Chat) {
+      setIsDrawerOpen(false);
+      setDrawerOffset(0);
+    }
+  }, [isMobileScreen, location.pathname]);
+
+  const settleDrawer = (open: boolean) => {
+    const maxDistance = getDrawerDistance();
+    setIsDrawerOpen(open);
+    setIsDrawerDragging(false);
+    setIsDrawerSettling(true);
+    setDrawerOffset(open ? maxDistance : 0);
+
+    if (drawerTimer.current !== null) {
+      window.clearTimeout(drawerTimer.current);
+    }
+    drawerTimer.current = window.setTimeout(() => {
+      setIsDrawerSettling(false);
+    }, 280);
   };
 
-  const moveEdgeSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const gesture = edgeSwipe.current;
-    if (gesture.pointerId !== event.pointerId || gesture.cancelled) return;
+  useEffect(() => {
+    const openMobileDrawer = () => {
+      if (
+        isMobileScreen &&
+        (location.pathname === Path.Chat || location.pathname === Path.Home)
+      ) {
+        settleDrawer(true);
+      }
+    };
 
-    const deltaX = event.clientX - gesture.startX;
-    const deltaY = event.clientY - gesture.startY;
-    const absX = Math.abs(deltaX);
-    const absY = Math.abs(deltaY);
+    window.addEventListener(MOBILE_DRAWER_EVENT, openMobileDrawer);
+    return () =>
+      window.removeEventListener(MOBILE_DRAWER_EVENT, openMobileDrawer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobileScreen, location.pathname]);
 
-    if (!gesture.directionLocked) {
-      if (Math.max(absX, absY) < 10) return;
-      if (deltaX <= 0 || absY > absX * 0.8) {
-        gesture.cancelled = true;
-        setIsEdgeSwiping(false);
+  useEffect(() => {
+    if (!isMobileScreen || !isDrawerOpen || isDrawerDragging) return;
+
+    const syncOpenDrawerOffset = () => {
+      setDrawerOffset(getDrawerDistance());
+    };
+
+    window.addEventListener("resize", syncOpenDrawerOffset);
+    window.addEventListener("orientationchange", syncOpenDrawerOffset);
+    return () => {
+      window.removeEventListener("resize", syncOpenDrawerOffset);
+      window.removeEventListener("orientationchange", syncOpenDrawerOffset);
+    };
+  }, [isMobileScreen, isDrawerOpen, isDrawerDragging]);
+
+  useEffect(() => {
+    if (!isMobileScreen) return;
+
+    const element = windowContentRef.current;
+    if (!element) return;
+
+    const finishTouchGesture = (identifier: number, cancelled = false) => {
+      const gesture = drawerGesture.current;
+      if (gesture.touchId !== identifier) return;
+
+      gesture.touchId = -1;
+
+      if (gesture.directionLocked) {
+        suppressDrawerClick.current = true;
+        window.setTimeout(() => {
+          suppressDrawerClick.current = false;
+        }, 0);
+      }
+
+      if (cancelled || gesture.cancelled || !gesture.directionLocked) {
+        setIsDrawerDragging(false);
+        settleDrawer(latestDrawerState.current.isOpen);
         return;
       }
-      gesture.directionLocked = true;
-    }
+
+      const projectedOffset = projectDrawerOffset(
+        gesture.offset,
+        gesture.velocityX,
+      );
+      const shouldOpen =
+        gesture.velocityX > DRAWER_VELOCITY_THRESHOLD ||
+        (gesture.velocityX > -DRAWER_VELOCITY_THRESHOLD &&
+          projectedOffset >= gesture.maxDistance * 0.5);
+
+      settleDrawer(shouldOpen);
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      const state = latestDrawerState.current;
+      if (
+        event.touches.length !== 1 ||
+        (state.pathname !== Path.Chat && state.pathname !== Path.Home) ||
+        shouldIgnoreDrawerGesture(event.target)
+      ) {
+        return;
+      }
+
+      const touch = event.changedTouches.item(0);
+      if (!touch) return;
+
+      const maxDistance = getDrawerDistance();
+      const startOffset = getPresentedDrawerOffset(
+        element,
+        maxDistance,
+        state.isOpen ? maxDistance : state.offset,
+      );
+
+      drawerGesture.current = {
+        touchId: touch.identifier,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        startOffset,
+        lastX: touch.clientX,
+        lastTime: performance.now(),
+        velocityX: 0,
+        offset: startOffset,
+        maxDistance,
+        directionLocked: false,
+        cancelled: false,
+      };
+      setDrawerOffset(startOffset);
+      setIsDrawerSettling(false);
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      const gesture = drawerGesture.current;
+      if (gesture.touchId < 0 || gesture.cancelled) return;
+
+      const touch = findTouch(event.touches, gesture.touchId);
+      if (!touch) return;
+
+      const deltaX = touch.clientX - gesture.startX;
+      const deltaY = touch.clientY - gesture.startY;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+
+      if (!gesture.directionLocked) {
+        if (Math.max(absX, absY) < DRAWER_INTENT_THRESHOLD) return;
+
+        const canMoveRight = gesture.startOffset < gesture.maxDistance - 1;
+        const canMoveLeft = gesture.startOffset > 1;
+        const isPossibleDrawerMove =
+          (deltaX > 0 && canMoveRight) || (deltaX < 0 && canMoveLeft);
+
+        if (!isPossibleDrawerMove || absX < absY * DRAWER_INTENT_RATIO) {
+          gesture.cancelled = true;
+          gesture.touchId = -1;
+          setIsDrawerDragging(false);
+          settleDrawer(latestDrawerState.current.isOpen);
+          return;
+        }
+
+        gesture.directionLocked = true;
+        setIsDrawerDragging(true);
+      }
+
+      event.preventDefault();
+      const now = performance.now();
+      const deltaTime = Math.max(1, now - gesture.lastTime);
+      gesture.velocityX = ((touch.clientX - gesture.lastX) / deltaTime) * 1000;
+      gesture.lastX = touch.clientX;
+      gesture.lastTime = now;
+      gesture.offset = clampDrawerOffset(
+        gesture.startOffset + deltaX,
+        gesture.maxDistance,
+      );
+      setDrawerOffset(gesture.offset);
+    };
+
+    const onTouchEnd = (event: TouchEvent) => {
+      const gesture = drawerGesture.current;
+      if (gesture.touchId < 0) return;
+
+      const touch = findTouch(event.changedTouches, gesture.touchId);
+      if (touch) finishTouchGesture(touch.identifier);
+    };
+
+    const onTouchCancel = (event: TouchEvent) => {
+      const gesture = drawerGesture.current;
+      if (gesture.touchId < 0) return;
+
+      const touch = findTouch(event.changedTouches, gesture.touchId);
+      if (touch) finishTouchGesture(touch.identifier, true);
+    };
+
+    element.addEventListener("touchstart", onTouchStart, { passive: true });
+    element.addEventListener("touchmove", onTouchMove, { passive: false });
+    element.addEventListener("touchend", onTouchEnd);
+    element.addEventListener("touchcancel", onTouchCancel);
+
+    return () => {
+      element.removeEventListener("touchstart", onTouchStart);
+      element.removeEventListener("touchmove", onTouchMove);
+      element.removeEventListener("touchend", onTouchEnd);
+      element.removeEventListener("touchcancel", onTouchCancel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobileScreen, location.pathname]);
+
+  const closeDrawer = () => {
+    if (!isDrawerOpen) return;
+    settleDrawer(false);
+  };
+
+  const handleDrawerClickCapture = (
+    event: React.MouseEvent<HTMLDivElement>,
+  ) => {
+    if (!isMobileScreen || !isDrawerOpen) return;
 
     event.preventDefault();
-    const now = performance.now();
-    const deltaTime = Math.max(1, now - gesture.lastTime);
-    gesture.velocityX = ((event.clientX - gesture.lastX) / deltaTime) * 1000;
-    gesture.lastX = event.clientX;
-    gesture.lastTime = now;
-    gesture.distance = Math.min(gesture.maxDistance, Math.max(0, deltaX));
-    setEdgeSwipeX(gesture.distance);
-  };
-
-  const finishEdgeSwipe = (
-    event: ReactPointerEvent<HTMLDivElement>,
-    cancelled = false,
-  ) => {
-    const gesture = edgeSwipe.current;
-    if (gesture.pointerId !== event.pointerId) return;
-
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
+    event.stopPropagation();
+    if (!suppressDrawerClick.current) {
+      closeDrawer();
     }
-    gesture.pointerId = -1;
-    setIsEdgeSwiping(false);
-
-    const shouldOpen =
-      !cancelled &&
-      !gesture.cancelled &&
-      gesture.distance > 42 &&
-      (gesture.distance > gesture.maxDistance * 0.28 ||
-        gesture.velocityX > 650);
-
-    setIsEdgeSettling(true);
-    setEdgeSwipeX(shouldOpen ? gesture.maxDistance : 0);
-
-    if (edgeSwipeTimer.current !== null) {
-      window.clearTimeout(edgeSwipeTimer.current);
-    }
-    edgeSwipeTimer.current = window.setTimeout(() => {
-      if (shouldOpen) {
-        navigate(Path.Home);
-      }
-      setEdgeSwipeX(0);
-      setIsEdgeSettling(false);
-    }, 220);
+    suppressDrawerClick.current = false;
   };
-
-  const edgeSwipeProgress = Math.min(
-    1,
-    edgeSwipeX / Math.max(1, edgeSwipe.current.maxDistance),
-  );
 
   if (isArtifact) {
     return (
@@ -305,38 +555,25 @@ function Screen() {
     if (isSdNew) return <Sd />;
     return (
       <>
-        {isMobileScreen && location.pathname === Path.Chat && (
-          <div
-            className={styles["edge-swipe-zone"]}
-            aria-hidden="true"
-            onPointerDown={startEdgeSwipe}
-            onPointerMove={moveEdgeSwipe}
-            onPointerUp={(event) => finishEdgeSwipe(event)}
-            onPointerCancel={(event) => finishEdgeSwipe(event, true)}
-          />
-        )}
-        {isMobileScreen && edgeSwipeX > 0 && (
-          <div
-            className={styles["edge-swipe-preview-backdrop"]}
-            aria-hidden="true"
-            style={{ opacity: edgeSwipeProgress * 0.72 }}
-          />
-        )}
         <SideBar
-          className={clsx({
-            [styles["sidebar-show"]]: isHome,
-          })}
-          onMobileDismiss={() => navigate(Path.Chat)}
+          onMobileDismiss={() => {
+            if (isMobileScreen) closeDrawer();
+          }}
         />
-        {isMobileScreen && isHome && (
-          <button
-            type="button"
-            className={styles["sidebar-backdrop"]}
-            aria-label={"关闭会话列表"}
-            onClick={() => navigate(Path.Chat)}
-          />
-        )}
-        <WindowContent>
+        <WindowContent
+          ref={windowContentRef}
+          className={clsx({
+            [styles["drawer-open"]]: isMobileScreen && drawerOffset > 0,
+          })}
+          style={
+            isMobileScreen
+              ? ({
+                  "--drawer-offset": `${drawerOffset}px`,
+                } as CSSProperties)
+              : undefined
+          }
+          onClickCapture={handleDrawerClickCapture}
+        >
           <Routes>
             <Route path={Path.Home} element={<Chat />} />
             <Route path={Path.NewChat} element={<NewChat />} />
@@ -357,14 +594,9 @@ function Screen() {
       className={clsx(styles.container, {
         [styles["tight-container"]]: shouldTightBorder,
         [styles["rtl-screen"]]: getLang() === "ar",
-        [styles["edge-swiping"]]: isEdgeSwiping,
-        [styles["edge-settling"]]: isEdgeSettling,
+        [styles["drawer-dragging"]]: isDrawerDragging,
+        [styles["drawer-settling"]]: isDrawerSettling,
       })}
-      style={
-        {
-          "--edge-swipe-x": `${edgeSwipeX}px`,
-        } as CSSProperties
-      }
     >
       {renderContent()}
     </div>

@@ -12,6 +12,7 @@ import MinIcon from "../icons/min.svg";
 
 import Locale from "../locales";
 
+import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import React, {
   CSSProperties,
@@ -27,6 +28,28 @@ import { IconButton } from "./button";
 import { Avatar } from "./emoji";
 import clsx from "clsx";
 import { useMobileScreen } from "../utils";
+
+export function BodyPortal(props: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const div = document.createElement("div");
+    if (props.className) {
+      div.className = props.className;
+    }
+    document.body.appendChild(div);
+    setContainer(div);
+
+    return () => {
+      div.remove();
+    };
+  }, [props.className]);
+
+  return container ? createPortal(props.children, container) : null;
+}
 
 export function Popover(props: {
   children: JSX.Element;

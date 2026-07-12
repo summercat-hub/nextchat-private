@@ -109,11 +109,13 @@
   border-radius: 18px;
   width: min(80vw, 900px);
   min-width: 300px;
-  max-height: min(88vh, 760px);
+  max-height: min(calc(var(--full-height) - 32px), 760px);
   overflow: hidden;
   animation: modal-in var(--motion-normal) var(--ease-out);
   backdrop-filter: blur(22px) saturate(160%);
   -webkit-backdrop-filter: blur(22px) saturate(160%);
+  display: flex;
+  flex-direction: column;
 
   --modal-padding: 20px;
 
@@ -178,7 +180,9 @@
   }
 
   .modal-content {
-    max-height: 40vh;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: min(58vh, calc(var(--full-height) - 180px));
     padding: var(--modal-padding);
     overflow: auto;
   }
@@ -209,6 +213,7 @@
     width: 100vw;
     max-width: 100vw;
     max-height: calc(var(--full-height) - 12px);
+    display: block;
     border-bottom: 0;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;

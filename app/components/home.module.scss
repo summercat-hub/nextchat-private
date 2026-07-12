@@ -107,9 +107,7 @@
 }
 
 .mobile,
-.sidebar-backdrop,
-.edge-swipe-zone,
-.edge-swipe-preview-backdrop {
+.sidebar-backdrop {
   display: none;
 }
 
@@ -138,56 +136,50 @@
     position: fixed;
     top: 0;
     left: 0;
-    z-index: 1001;
+    z-index: 0;
     height: var(--full-height);
     padding-top: calc(14px + env(safe-area-inset-top));
     padding-bottom: calc(14px + env(safe-area-inset-bottom));
-    transform: translateX(-100%);
-    transition: transform var(--motion-normal) var(--ease-out);
-    box-shadow: var(--elevated-shadow);
-    will-change: transform;
+    transform: none;
+    transition: none;
+    box-shadow:
+      inset -1px 0 0 var(--separator),
+      10px 0 30px rgba(0, 0, 0, 0.08);
     touch-action: pan-y;
   }
 
-  .sidebar-show {
-    transform: translateX(0);
+  .window-content {
+    position: relative;
+    z-index: 1;
+    width: 100vw;
+    height: var(--full-height);
+    background: var(--surface-primary);
+    transform: translate3d(var(--drawer-offset, 0), 0, 0);
+    transition:
+      transform var(--motion-normal) var(--ease-out),
+      border-radius var(--motion-fast) var(--ease-out),
+      box-shadow var(--motion-fast) var(--ease-out);
+    will-change: transform;
+    overflow: hidden;
   }
 
-  .edge-swiping .sidebar,
-  .edge-settling .sidebar {
-    transform: translateX(calc(-100% + var(--edge-swipe-x)));
+  .drawer-open {
+    border-top-left-radius: 18px;
+    border-bottom-left-radius: 18px;
+    box-shadow:
+      -18px 0 34px rgba(0, 0, 0, 0.18),
+      -1px 0 0 rgba(255, 255, 255, 0.35);
   }
 
-  .edge-swiping .sidebar {
+  .drawer-dragging .window-content {
     transition: none !important;
   }
 
-  .edge-settling .sidebar {
-    transition: transform 220ms var(--ease-out) !important;
-  }
-
-  .edge-swipe-zone {
-    display: block;
-    position: fixed;
-    top: calc(env(safe-area-inset-top) + 58px);
-    bottom: calc(env(safe-area-inset-bottom) + 120px);
-    left: 8px;
-    z-index: 1002;
-    width: 28px;
-    touch-action: pan-y;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .edge-swipe-preview-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: var(--scrim);
-    pointer-events: none;
-    backdrop-filter: blur(1px);
-    -webkit-backdrop-filter: blur(1px);
-    transition: opacity 60ms linear;
+  .drawer-settling .window-content {
+    transition:
+      transform var(--motion-normal) var(--ease-out),
+      border-radius var(--motion-fast) var(--ease-out),
+      box-shadow var(--motion-fast) var(--ease-out);
   }
 
   .sidebar-drag {
@@ -212,6 +204,13 @@
 
   .mobile {
     display: block;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .window-content,
+    .drawer-settling .window-content {
+      transition: none !important;
+    }
   }
 }
 

@@ -91,6 +91,7 @@ import { IconButton } from "./button";
 import styles from "./chat.module.scss";
 
 import {
+  BodyPortal,
   List,
   ListItem,
   Modal,
@@ -269,7 +270,9 @@ function PromptToast(props: {
         </div>
       )}
       {props.showModal && (
-        <SessionConfigModel onClose={() => props.setShowModal(false)} />
+        <BodyPortal>
+          <SessionConfigModel onClose={() => props.setShowModal(false)} />
+        </BodyPortal>
       )}
     </div>
   );
@@ -1684,7 +1687,11 @@ function _Chat() {
                   bordered
                   title={Locale.Chat.Actions.ChatList}
                   aria={Locale.Chat.Actions.ChatList}
-                  onClick={() => navigate(Path.Home)}
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent("nextchat:open-mobile-drawer"),
+                    )
+                  }
                 />
               </div>
             </div>

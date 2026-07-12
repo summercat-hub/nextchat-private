@@ -337,6 +337,8 @@ div.math {
   left: 0;
   height: var(--full-height);
   width: 100vw;
+  padding: 16px;
+  box-sizing: border-box;
   background-color: var(--scrim);
   display: flex;
   align-items: center;
@@ -347,6 +349,7 @@ div.math {
 
   @media screen and (max-width: 640px) {
     align-items: flex-end;
+    padding: 0;
   }
 }
 
