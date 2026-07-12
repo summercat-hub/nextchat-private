@@ -1795,6 +1795,7 @@ function _Chat() {
           <div className={styles["chat-body-container"]}>
             <div
               className={styles["chat-body"]}
+              data-chat-scroll-body=""
               ref={scrollRef}
               onScroll={(e) => onChatBodyScroll(e.currentTarget)}
               onMouseDown={() => inputRef.current?.blur()}
