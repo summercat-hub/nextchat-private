@@ -56,7 +56,7 @@ const cn = {
     },
     Commands: {
       new: "新建聊天",
-      newm: "从面具新建聊天",
+      newm: "新建聊天",
       next: "下一个聊天",
       prev: "上一个聊天",
       clear: "清除上下文",
@@ -72,7 +72,7 @@ const cn = {
         dark: "深色模式",
       },
       Prompt: "快捷指令",
-      Masks: "所有面具",
+      Masks: "预设角色",
       Clear: "清除聊天",
       Settings: "对话设置",
       UploadImage: "上传图片",
@@ -89,7 +89,7 @@ const cn = {
     StopSpeak: "停止",
     Config: {
       Reset: "清除记忆",
-      SaveAs: "存为面具",
+      SaveAs: "保存为预设",
     },
     IsContext: "预设提示词",
     ShortcutKey: {
@@ -114,8 +114,8 @@ const cn = {
       SubTitle: "可以导出 Markdown 文本或者 PNG 图片",
     },
     IncludeContext: {
-      Title: "包含面具上下文",
-      SubTitle: "是否在消息中展示面具上下文",
+      Title: "包含预设上下文",
+      SubTitle: "是否在消息中展示预设上下文",
     },
     Steps: {
       Select: "选取",
@@ -252,18 +252,18 @@ const cn = {
 
       LocalState: "本地数据",
       Overview: (overview: any) => {
-        return `${overview.chat} 次对话，${overview.message} 条消息，${overview.prompt} 条提示词，${overview.mask} 个面具`;
+        return `${overview.chat} 次对话，${overview.message} 条消息，${overview.prompt} 条提示词`;
       },
       ImportFailed: "导入失败",
     },
     Mask: {
       Splash: {
-        Title: "面具启动页",
-        SubTitle: "新建聊天时，展示面具启动页",
+        Title: "预设启动页",
+        SubTitle: "新建聊天时，展示预设启动页",
       },
       Builtin: {
-        Title: "隐藏内置面具",
-        SubTitle: "在所有面具列表中隐藏内置面具",
+        Title: "隐藏内置预设",
+        SubTitle: "在预设列表中隐藏内置预设",
       },
     },
     Prompt: {
@@ -715,11 +715,11 @@ const cn = {
     },
   },
   Mask: {
-    Name: "面具",
+    Name: "预设角色",
     Page: {
-      Title: "预设角色面具",
+      Title: "预设角色",
       SubTitle: (count: number) => `${count} 个预设角色定义`,
-      Search: "搜索角色面具",
+      Search: "搜索预设角色",
       Create: "新建",
     },
     Item: {
@@ -732,7 +732,7 @@ const cn = {
     },
     EditModal: {
       Title: (readonly: boolean) =>
-        `编辑预设面具 ${readonly ? "（只读）" : ""}`,
+        `编辑预设角色 ${readonly ? "（只读）" : ""}`,
       Download: "下载预设",
       Clone: "克隆预设",
     },
@@ -757,8 +757,8 @@ const cn = {
         SubTitle: "启用之后可以自动折叠/展开过长的代码块",
       },
       Share: {
-        Title: "分享此面具",
-        SubTitle: "生成此面具的直达链接",
+        Title: "分享此预设",
+        SubTitle: "生成此预设的直达链接",
         Action: "复制链接",
       },
     },
@@ -767,10 +767,10 @@ const cn = {
     Return: "返回",
     Skip: "直接开始",
     NotShow: "以后直接开始",
-    ConfirmNoShow: "确认以后跳过此页面？你仍可随时从会话列表选择角色。",
+    ConfirmNoShow: "确认以后直接开始新的聊天？",
     Title: "开始新的对话",
-    SubTitle: "直接开始聊天，或先选择一个适合当前任务的角色。",
-    More: "选择角色",
+    SubTitle: "每次都会直接进入聊天界面。",
+    More: "展开更多",
   },
 
   URLCommand: {
