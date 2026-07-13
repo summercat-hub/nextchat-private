@@ -4,7 +4,6 @@ import styles from "./home.module.scss";
 
 import { IconButton } from "./button";
 import SettingsIcon from "../icons/settings.svg";
-import ChatGptIcon from "../icons/chatgpt.svg";
 import AddIcon from "../icons/add.svg";
 import McpIcon from "../icons/mcp.svg";
 import DragIcon from "../icons/drag.svg";
@@ -193,7 +192,9 @@ export function SideBarHeader(props: {
             <div className={styles["sidebar-sub-title"]}>{subTitle}</div>
           )}
         </div>
-        <div className={clsx(styles["sidebar-logo"], "no-dark")}>{logo}</div>
+        {logo && (
+          <div className={clsx(styles["sidebar-logo"], "no-dark")}>{logo}</div>
+        )}
       </div>
       {children}
     </Fragment>
@@ -253,11 +254,7 @@ export function SideBar(props: {
       shouldNarrow={shouldNarrow}
       {...props}
     >
-      <SideBarHeader
-        title="True Chat"
-        logo={<ChatGptIcon />}
-        shouldNarrow={shouldNarrow}
-      >
+      <SideBarHeader title="True Chat" shouldNarrow={shouldNarrow}>
         {mcpEnabled && (
           <div className={styles["sidebar-header-bar"]}>
             <IconButton
