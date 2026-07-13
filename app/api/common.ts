@@ -39,6 +39,7 @@ type WebSearchDecision = {
     | "date_time_calculation"
     | "local_task"
     | "conversational"
+    | "stable_general_knowledge"
     | "general_knowledge"
     | "uncertain";
 };
@@ -82,6 +83,17 @@ const DATE_TIME_CALCULATION_PATTERNS = [
 
 const LOCAL_TASK_PATTERNS = [
   /(翻译|改写|润色|总结|摘要|扩写|缩写|仿写|写一篇|写一个|生成|起草|帮我写|分析这段|阅读以下|根据下面|代码|函数|报错|数学|计算)/i,
+];
+
+const STABLE_GENERAL_KNOWLEDGE_PATTERNS = [
+  /(为什么|为何|什么是|是什么|解释一下|讲讲|介绍一下|原理|区别|有什么区别|怎么理解|如何理解|怎么回事)/i,
+  /\b(why|what is|explain|difference between|compare|how does|concept|principle)\b/i,
+];
+
+const STATIC_PROGRAMMING_PATTERNS = [
+  /\b(python|javascript|typescript|java|go|rust|c\+\+|html|css|react|next\.?js|node\.?js|sql)\b/i,
+  /\b(list\.sort|sorted|array|object|string|dict|tuple|class|function|method|syntax|iterator|promise|async|await)\b/i,
+  /(语法|函数|方法|类|对象|数组|字符串|列表|字典|元组|迭代器|排序|返回值|原地|区别|用法|怎么用)/i,
 ];
 
 function matchesAnyPattern(text: string, patterns: RegExp[]) {
@@ -177,6 +189,20 @@ function decideWebSearchByRule(body: OpenAIChatBody): WebSearchDecision | null {
       query: normalizedQuery,
       source: "rule",
       category: "local_task",
+    };
+  }
+
+  if (
+    matchesAnyPattern(normalizedQuery, STATIC_PROGRAMMING_PATTERNS) ||
+    matchesAnyPattern(normalizedQuery, STABLE_GENERAL_KNOWLEDGE_PATTERNS)
+  ) {
+    return {
+      shouldSearch: false,
+      reason:
+        "query asks for stable knowledge that does not need current web data",
+      query: normalizedQuery,
+      source: "rule",
+      category: "stable_general_knowledge",
     };
   }
 
@@ -304,7 +330,7 @@ async function decideWebSearchWithRouter(
           {
             role: "system",
             content:
-              'You are a web-search routing classifier. Decide whether answering the user\'s question requires current external information from the web. Do not answer the user\'s question. Return only valid compact JSON with this shape: {"needsSearch":boolean,"reason":"short reason","category":"current_external_fact|date_time_calculation|local_task|general_knowledge|uncertain","searchQuery":string|null}. Rules: if the question asks about latest/current/recent status of companies, products, models, APIs, prices, policies, weather, news, availability, rankings, versions, schedules, or public roles, needsSearch must be true. If the question only asks today\'s/tomorrow\'s/yesterday\'s date, weekday, or date arithmetic, needsSearch must be false. If unsure, needsSearch must be true and category must be uncertain.',
+              'You are a web-search routing classifier. Decide whether answering the user\'s question requires current external information from the web. Do not answer the user\'s question. Return only valid compact JSON with this shape: {"needsSearch":boolean,"reason":"short reason","category":"current_external_fact|date_time_calculation|local_task|stable_general_knowledge|general_knowledge|uncertain","searchQuery":string|null}. Rules: needsSearch=true only when the answer depends on current external facts: latest/current/recent status of companies, products, models, APIs, prices, policies, weather, news, availability, rankings, versions, schedules, public roles, live events, or web pages. needsSearch=false for stable educational questions, science explanations, definitions, comparisons, programming language/API concepts, code syntax, local writing, translation, summarization, math, and date arithmetic. If the question is ambiguous but has no clear latest/current/recent/live/external-status requirement, choose needsSearch=false with category stable_general_knowledge or general_knowledge. Use category uncertain only when it likely needs current external facts but the search query is unclear.',
           },
           {
             role: "user",
@@ -337,7 +363,7 @@ async function decideWebSearchWithRouter(
     };
     const category = parsed.category || "uncertain";
     const shouldSearch =
-      parsed.needsSearch === true || category === "uncertain";
+      parsed.needsSearch === true && category !== "stable_general_knowledge";
     const searchQuery =
       typeof parsed.searchQuery === "string" && parsed.searchQuery.trim()
         ? parsed.searchQuery.trim()
@@ -353,8 +379,9 @@ async function decideWebSearchWithRouter(
   } catch (e) {
     console.error("[Web Search Router]", e);
     return {
-      shouldSearch: true,
-      reason: "router failed; falling back to search for uncertain query",
+      shouldSearch: false,
+      reason:
+        "router failed; falling back to no search for low-confidence query",
       query,
       source: "fallback",
       category: "uncertain",
