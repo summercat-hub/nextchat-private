@@ -30,22 +30,54 @@ type WebSearchDecision = {
   shouldSearch: boolean;
   reason: string;
   query?: string;
+  source: "rule" | "router" | "fallback";
+  category:
+    | "explicit_no_search"
+    | "explicit_search"
+    | "url"
+    | "current_external_fact"
+    | "date_time_calculation"
+    | "local_task"
+    | "conversational"
+    | "general_knowledge"
+    | "uncertain";
 };
 
 const DIRECT_SEARCH_PATTERNS = [
-  /\b(search|google|browse|web search|look up|latest|current|source|citation|official site)\b/i,
+  /\b(search|google|browse|web search|look up|source|citation|official site)\b/i,
   /(搜索|搜一下|搜搜|查一下|查查|查询|检索|全网|网上|联网|互联网|官网|链接|网址|出处|来源|引用|小红书|推特|Twitter|Reddit|YouTube|GitHub)/i,
 ];
 
-const CURRENT_INFO_PATTERNS = [
-  /(最新|最近|现在|当前|目前|截止目前|今天|昨天|本周|这个月|今年|实时|新闻|公告|发布|上架|下架|可用|不可用)/i,
-  /(价格|费用|收费|计费|多少钱|汇率|股价|天气|抽签|截止日期|排名|排行|榜单|政策|法规|规则|版本)/i,
-  /((Vercel|DeepInfra|Tavily|Gemini|ChatGPT|Codex|API|模型).{0,12}(价格|费用|收费|计费|最新|当前|现在|版本|可用|不可用|支持|发布|截止)|(价格|费用|收费|计费|最新|当前|现在|版本|可用|不可用|支持|发布|截止).{0,12}(Vercel|DeepInfra|Tavily|Gemini|ChatGPT|Codex|API|模型))/i,
+const EXPLICIT_NO_SEARCH_PATTERNS = [
+  /(不要搜索|不用搜索|别搜索|不要联网|不用联网|别联网|不用查|不要查)/i,
 ];
 
-const ALWAYS_SKIP_SEARCH_PATTERNS = [
+const CONVERSATIONAL_PATTERNS = [
   /^(你好|您好|嗨|hi|hello|hey|在吗|早上好|晚上好|谢谢|感谢)[。.!！?？\s]*$/i,
-  /(不要搜索|不用搜索|别搜索|不要联网|不用联网|别联网|不用查|不要查)/i,
+];
+
+const CURRENT_OR_RELATIVE_TIME_PATTERNS = [
+  /(最新|最近|现在|当前|目前|截止|今天|明天|后天|昨天|本周|下周|这个月|今年|实时|刚刚|新出|已经|还|是否|能不能)/i,
+];
+
+const VOLATILE_EXTERNAL_FACT_PATTERNS = [
+  /(天气|气温|空气质量|台风|价格|费用|收费|计费|多少钱|汇率|股价|股票|基金|黄金|油价)/i,
+  /(新闻|公告|发布|上线|上架|下架|可用|不可用|政策|法规|规则|排名|排行|榜单|赛程|比分|抽签|截止日期)/i,
+  /(总统|首相|CEO|负责人|创始人|官网|营业|开门|关门|地址|电话)/i,
+];
+
+const DYNAMIC_SUBJECT_PATTERNS = [
+  /(OpenAI|ChatGPT|Gemini|Claude|DeepSeek|DeepInfra|Tavily|Vercel|Codex|Grok|API|模型|model|公司|产品|官网|GitHub|小红书|推特|Twitter|Reddit|YouTube)/i,
+];
+
+const MODEL_OR_PRODUCT_RELEASE_PATTERNS = [
+  /((OpenAI|ChatGPT|Gemini|Claude|DeepSeek|DeepInfra|Tavily|Vercel|Codex|Grok|模型|model|API).{0,20}(出到|更新到|最新|现在|当前|版本|发布|上线|支持哪些|有哪些|能用|可用|几代|哪一版)|(出到|更新到|最新|现在|当前|版本|发布|上线|支持哪些|有哪些|能用|可用|几代|哪一版).{0,20}(OpenAI|ChatGPT|Gemini|Claude|DeepSeek|DeepInfra|Tavily|Vercel|Codex|Grok|模型|model|API))/i,
+];
+
+const DATE_TIME_CALCULATION_PATTERNS = [
+  /(今天|明天|后天|昨天|前天|本周|下周|上周|这个月|下个月|今年|明年).{0,16}(几月几号|几号|多少号|星期几|周几|哪天|日期)/i,
+  /(几月几号|几号|多少号|星期几|周几|哪天|日期).{0,16}(今天|明天|后天|昨天|前天|本周|下周|上周|这个月|下个月|今年|明年)/i,
+  /(现在|当前|此刻).{0,8}(几点|时间|日期)/i,
 ];
 
 const LOCAL_TASK_PATTERNS = [
@@ -56,19 +88,45 @@ function matchesAnyPattern(text: string, patterns: RegExp[]) {
   return patterns.some((pattern) => pattern.test(text));
 }
 
-function decideWebSearch(body: OpenAIChatBody): WebSearchDecision {
+function looksLikeCurrentExternalFact(text: string) {
+  if (matchesAnyPattern(text, MODEL_OR_PRODUCT_RELEASE_PATTERNS)) return true;
+  if (matchesAnyPattern(text, VOLATILE_EXTERNAL_FACT_PATTERNS)) return true;
+  return (
+    matchesAnyPattern(text, CURRENT_OR_RELATIVE_TIME_PATTERNS) &&
+    matchesAnyPattern(text, DYNAMIC_SUBJECT_PATTERNS)
+  );
+}
+
+function decideWebSearchByRule(body: OpenAIChatBody): WebSearchDecision | null {
   const query = getLastUserQuery(body);
   const normalizedQuery = query.replace(/\s+/g, " ").trim();
 
   if (!normalizedQuery) {
-    return { shouldSearch: false, reason: "empty user query" };
-  }
-
-  if (matchesAnyPattern(normalizedQuery, ALWAYS_SKIP_SEARCH_PATTERNS)) {
     return {
       shouldSearch: false,
-      reason: "query is conversational or explicitly says not to search",
+      reason: "empty user query",
+      source: "rule",
+      category: "local_task",
+    };
+  }
+
+  if (matchesAnyPattern(normalizedQuery, EXPLICIT_NO_SEARCH_PATTERNS)) {
+    return {
+      shouldSearch: false,
+      reason: "query explicitly says not to search",
       query: normalizedQuery,
+      source: "rule",
+      category: "explicit_no_search",
+    };
+  }
+
+  if (matchesAnyPattern(normalizedQuery, CONVERSATIONAL_PATTERNS)) {
+    return {
+      shouldSearch: false,
+      reason: "query is conversational",
+      query: normalizedQuery,
+      source: "rule",
+      category: "conversational",
     };
   }
 
@@ -77,6 +135,8 @@ function decideWebSearch(body: OpenAIChatBody): WebSearchDecision {
       shouldSearch: true,
       reason: "query contains explicit search or source intent",
       query: normalizedQuery,
+      source: "rule",
+      category: "explicit_search",
     };
   }
 
@@ -85,6 +145,28 @@ function decideWebSearch(body: OpenAIChatBody): WebSearchDecision {
       shouldSearch: true,
       reason: "query contains a web URL",
       query: normalizedQuery,
+      source: "rule",
+      category: "url",
+    };
+  }
+
+  if (looksLikeCurrentExternalFact(normalizedQuery)) {
+    return {
+      shouldSearch: true,
+      reason: "query asks for current or changeable external information",
+      query: normalizedQuery,
+      source: "rule",
+      category: "current_external_fact",
+    };
+  }
+
+  if (matchesAnyPattern(normalizedQuery, DATE_TIME_CALCULATION_PATTERNS)) {
+    return {
+      shouldSearch: false,
+      reason: "query only needs runtime date/time calculation",
+      query: normalizedQuery,
+      source: "rule",
+      category: "date_time_calculation",
     };
   }
 
@@ -93,22 +175,12 @@ function decideWebSearch(body: OpenAIChatBody): WebSearchDecision {
       shouldSearch: false,
       reason: "query can be handled locally without external information",
       query: normalizedQuery,
+      source: "rule",
+      category: "local_task",
     };
   }
 
-  if (matchesAnyPattern(normalizedQuery, CURRENT_INFO_PATTERNS)) {
-    return {
-      shouldSearch: true,
-      reason: "query appears to need current or changeable information",
-      query: normalizedQuery,
-    };
-  }
-
-  return {
-    shouldSearch: false,
-    reason: "no clear search intent or time-sensitive need",
-    query: normalizedQuery,
-  };
+  return null;
 }
 
 function getContentText(content: OpenAIChatMessage["content"]) {
@@ -129,6 +201,176 @@ function getLastUserQuery(body: OpenAIChatBody) {
   return lastUserMessage ? getContentText(lastUserMessage.content).trim() : "";
 }
 
+function getRuntimeFacts() {
+  const now = new Date();
+  const timeZone = serverConfig.webSearchTimeZone || "Asia/Shanghai";
+
+  try {
+    return {
+      isoTime: now.toISOString(),
+      localizedTime: new Intl.DateTimeFormat("zh-CN", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        weekday: "long",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+        timeZoneName: "short",
+      }).format(now),
+      timeZone,
+    };
+  } catch (e) {
+    console.error("[Runtime Context] invalid time zone", timeZone, e);
+    return {
+      isoTime: now.toISOString(),
+      localizedTime: now.toISOString(),
+      timeZone: "UTC",
+    };
+  }
+}
+
+function injectRuntimeContext(body: OpenAIChatBody): OpenAIChatBody {
+  const runtime = getRuntimeFacts();
+
+  return {
+    ...body,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Runtime context injected by the server for this turn.\n" +
+          `Current server time: ${runtime.localizedTime}\n` +
+          `Current server time ISO: ${runtime.isoTime}\n` +
+          `Time zone: ${runtime.timeZone}\n` +
+          "When the user mentions relative dates or times such as today, tomorrow, yesterday, this week, next week, recent, current, or now, interpret them using this runtime context instead of model training data. If the question only asks for date/time arithmetic, answer from this context without claiming web search is needed.",
+      },
+      ...(body.messages ?? []),
+    ],
+  };
+}
+
+function extractJsonObject(text: string) {
+  const match = text.match(/\{[\s\S]*\}/);
+  return match ? match[0] : "";
+}
+
+async function decideWebSearchWithRouter(
+  body: OpenAIChatBody,
+): Promise<WebSearchDecision> {
+  const query = getLastUserQuery(body).replace(/\s+/g, " ").trim();
+  const model = serverConfig.webSearchRouterModel;
+  const apiKey = serverConfig.webSearchRouterApiKey;
+
+  if (!query) {
+    return {
+      shouldSearch: false,
+      reason: "empty user query",
+      source: "fallback",
+      category: "local_task",
+    };
+  }
+
+  if (!model || !apiKey) {
+    return {
+      shouldSearch: false,
+      reason: "router model or API key is not configured",
+      query,
+      source: "fallback",
+      category: "general_knowledge",
+    };
+  }
+
+  const runtime = getRuntimeFacts();
+  const baseUrl = (
+    serverConfig.webSearchRouterBaseUrl || "https://api.deepinfra.com/v1/openai"
+  ).replace(/\/+$/, "");
+
+  try {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        stream: false,
+        temperature: 0,
+        max_tokens: 180,
+        messages: [
+          {
+            role: "system",
+            content:
+              'You are a web-search routing classifier. Decide whether answering the user\'s question requires current external information from the web. Do not answer the user\'s question. Return only valid compact JSON with this shape: {"needsSearch":boolean,"reason":"short reason","category":"current_external_fact|date_time_calculation|local_task|general_knowledge|uncertain","searchQuery":string|null}. Rules: if the question asks about latest/current/recent status of companies, products, models, APIs, prices, policies, weather, news, availability, rankings, versions, schedules, or public roles, needsSearch must be true. If the question only asks today\'s/tomorrow\'s/yesterday\'s date, weekday, or date arithmetic, needsSearch must be false. If unsure, needsSearch must be true and category must be uncertain.',
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              currentServerTime: runtime.localizedTime,
+              currentServerIsoTime: runtime.isoTime,
+              timeZone: runtime.timeZone,
+              userQuestion: query,
+            }),
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `router failed: ${response.status} ${await response.text()}`,
+      );
+    }
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = data.choices?.[0]?.message?.content ?? "";
+    const parsed = JSON.parse(extractJsonObject(content)) as {
+      needsSearch?: boolean;
+      reason?: string;
+      category?: WebSearchDecision["category"];
+      searchQuery?: string | null;
+    };
+    const category = parsed.category || "uncertain";
+    const shouldSearch =
+      parsed.needsSearch === true || category === "uncertain";
+    const searchQuery =
+      typeof parsed.searchQuery === "string" && parsed.searchQuery.trim()
+        ? parsed.searchQuery.trim()
+        : query;
+
+    return {
+      shouldSearch,
+      reason: parsed.reason || "router classified the query",
+      query: searchQuery,
+      source: "router",
+      category,
+    };
+  } catch (e) {
+    console.error("[Web Search Router]", e);
+    return {
+      shouldSearch: true,
+      reason: "router failed; falling back to search for uncertain query",
+      query,
+      source: "fallback",
+      category: "uncertain",
+    };
+  }
+}
+
+async function decideWebSearch(
+  body: OpenAIChatBody,
+): Promise<WebSearchDecision> {
+  const ruleDecision = decideWebSearchByRule(body);
+  if (ruleDecision) return ruleDecision;
+
+  return decideWebSearchWithRouter(body);
+}
+
 function formatSearchContext(results: TavilySearchResult[]) {
   if (results.length === 0) {
     return "Tavily search returned no useful results for this query.";
@@ -144,8 +386,12 @@ function formatSearchContext(results: TavilySearchResult[]) {
     .join("\n\n");
 }
 
-async function injectTavilySearchContext(body: OpenAIChatBody, apiKey: string) {
-  const query = getLastUserQuery(body);
+async function injectTavilySearchContext(
+  body: OpenAIChatBody,
+  apiKey: string,
+  searchQuery?: string,
+) {
+  const query = (searchQuery || getLastUserQuery(body)).trim();
   if (!query) return body;
 
   const response = await fetch("https://api.tavily.com/search", {
@@ -296,37 +542,44 @@ export async function requestOpenai(req: NextRequest) {
     signal: controller.signal,
   };
 
+  const isChatCompletionRequest =
+    req.method === "POST" && path.endsWith("chat/completions");
   const shouldUseWebSearch =
-    req.headers.get(WEB_SEARCH_HEADER) === "1" &&
-    req.method === "POST" &&
-    path.endsWith("chat/completions");
+    req.headers.get(WEB_SEARCH_HEADER) === "1" && isChatCompletionRequest;
 
-  if (shouldUseWebSearch && requestBodyText) {
+  if (isChatCompletionRequest && requestBodyText) {
     try {
-      const jsonBody = JSON.parse(requestBodyText) as OpenAIChatBody;
-      const searchDecision = decideWebSearch(jsonBody);
-      console.log("[Tavily Search Decision]", searchDecision);
+      let jsonBody = injectRuntimeContext(
+        JSON.parse(requestBodyText) as OpenAIChatBody,
+      );
 
-      if (searchDecision.shouldSearch) {
-        if (!serverConfig.tavilyApiKey) {
-          return NextResponse.json(
-            {
-              error: true,
-              message: "TAVILY_API_KEY is not configured.",
-            },
-            { status: 400 },
+      if (shouldUseWebSearch) {
+        const searchDecision = await decideWebSearch(jsonBody);
+        console.log("[Web Search Decision]", searchDecision);
+
+        if (searchDecision.shouldSearch) {
+          if (!serverConfig.tavilyApiKey) {
+            return NextResponse.json(
+              {
+                error: true,
+                message: "TAVILY_API_KEY is not configured.",
+              },
+              { status: 400 },
+            );
+          }
+
+          jsonBody = await injectTavilySearchContext(
+            jsonBody,
+            serverConfig.tavilyApiKey,
+            searchDecision.query,
           );
         }
-
-        const bodyWithSearch = await injectTavilySearchContext(
-          jsonBody,
-          serverConfig.tavilyApiKey,
-        );
-        requestBodyText = JSON.stringify(bodyWithSearch);
-        fetchOptions.body = requestBodyText;
       }
+
+      requestBodyText = JSON.stringify(jsonBody);
+      fetchOptions.body = requestBodyText;
     } catch (e) {
-      console.error("[Tavily Search]", e);
+      console.error("[Chat Request Preparation]", e);
       return NextResponse.json(
         {
           error: true,
