@@ -193,7 +193,6 @@
 }
 
 .chat-input-menu-item-disabled {
-  opacity: 0.78;
   cursor: default;
 
   &:active {
@@ -207,9 +206,9 @@
 }
 
 .chat-input-menu-icon {
-  width: 46px;
-  height: 46px;
-  flex: 0 0 46px;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -218,10 +217,18 @@
   color: var(--chat-menu-icon-color);
 
   svg {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     display: block;
     overflow: visible;
+  }
+
+  .chat-input-menu-glyph {
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
   }
 
   svg *[stroke="#333"],
@@ -921,7 +928,7 @@
   line-height: 1.35;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  padding: 13px 58px 13px 68px;
+  padding: 13px 58px 13px 62px;
   resize: none;
   outline: none;
   box-sizing: border-box;
@@ -990,13 +997,13 @@
   }
 
   .chat-input-actions {
-    left: 26px;
+    left: 18px;
     bottom: calc(13px + env(safe-area-inset-bottom));
   }
 
   .chat-input {
     min-height: 50px;
-    padding: 13px 58px 13px 68px;
+    padding: 13px 58px 13px 62px;
     font-size: 16px !important;
   }
 

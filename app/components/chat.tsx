@@ -23,18 +23,13 @@ import MaxIcon from "../icons/max.svg";
 import MinIcon from "../icons/min.svg";
 import ResetIcon from "../icons/reload.svg";
 import ReloadIcon from "../icons/reload.svg";
-import SettingsIcon from "../icons/chat-settings.svg";
 import DeleteIcon from "../icons/clear.svg";
 import PinIcon from "../icons/pin.svg";
 import ConfirmIcon from "../icons/confirm.svg";
 import CloseIcon from "../icons/close.svg";
 import CancelIcon from "../icons/cancel.svg";
-import ImageIcon from "../icons/image.svg";
 import MenuIcon from "../icons/menu.svg";
 
-import LightIcon from "../icons/light.svg";
-import DarkIcon from "../icons/dark.svg";
-import AutoIcon from "../icons/auto.svg";
 import StopIcon from "../icons/pause.svg";
 import {
   BOT_HELLO,
@@ -118,6 +113,79 @@ const ExportMessageModal = dynamic(
     loading: () => <LoadingIcon />,
   },
 );
+
+function MenuUploadIcon() {
+  return (
+    <svg
+      className={styles["chat-input-menu-glyph"]}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="4.5" y="5.2" width="15" height="13.6" rx="2.8" />
+      <circle cx="9" cy="10" r="1.55" />
+      <path d="M6.8 17.1 11.1 12.8 14.3 15.9 16.1 14.1 19 17.1" />
+    </svg>
+  );
+}
+
+function MenuThemeIcon(props: { theme: Theme }) {
+  if (props.theme === Theme.Dark) {
+    return (
+      <svg
+        className={styles["chat-input-menu-glyph"]}
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M15.8 4.9a7.3 7.3 0 1 0 3.3 11.3 6.2 6.2 0 0 1-7.7-7.7 7.4 7.4 0 0 0 4.4-3.6Z" />
+      </svg>
+    );
+  }
+
+  if (props.theme === Theme.Light) {
+    return (
+      <svg
+        className={styles["chat-input-menu-glyph"]}
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <circle cx="12" cy="12" r="4.25" />
+        <path d="M12 3.6v2.05M12 18.35v2.05M3.6 12h2.05M18.35 12h2.05M6.05 6.05l1.45 1.45M16.5 16.5l1.45 1.45M17.95 6.05 16.5 7.5M7.5 16.5l-1.45 1.45" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      className={styles["chat-input-menu-glyph"]}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M5.4 14.7A7.2 7.2 0 0 1 17 6.5" />
+      <path d="M17 6.5h-3.1M17 6.5v-3.1" />
+      <path d="M18.6 9.3A7.2 7.2 0 0 1 7 17.5" />
+      <path d="M7 17.5h3.1M7 17.5v3.1" />
+      <path d="M9.2 14.5 12 8.7l2.8 5.8M10.2 12.6h3.6" />
+    </svg>
+  );
+}
+
+function MenuSettingsIcon() {
+  return (
+    <svg
+      className={styles["chat-input-menu-glyph"]}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M10.2 4.3h3.6l.55 2.05a6.2 6.2 0 0 1 1.35.78l2.04-.56 1.8 3.12-1.49 1.5a6.5 6.5 0 0 1 0 1.62l1.49 1.5-1.8 3.12-2.04-.56a6.2 6.2 0 0 1-1.35.78l-.55 2.05h-3.6l-.55-2.05a6.2 6.2 0 0 1-1.35-.78l-2.04.56-1.8-3.12 1.49-1.5a6.5 6.5 0 0 1 0-1.62l-1.49-1.5 1.8-3.12 2.04.56a6.2 6.2 0 0 1 1.35-.78l.55-2.05Z" />
+      <circle cx="12" cy="12" r="2.65" />
+    </svg>
+  );
+}
 
 const RealtimeChat = dynamic(
   async () => (await import("@/app/components/realtime-chat")).RealtimeChat,
@@ -528,7 +596,7 @@ export function ChatActions(props: {
             onClick={() => runMenuAction(uploadImage)}
           >
             <span className={styles["chat-input-menu-icon"]}>
-              {uploading ? <LoadingButtonIcon /> : <ImageIcon />}
+              {uploading ? <LoadingButtonIcon /> : <MenuUploadIcon />}
             </span>
             <span>{Locale.Chat.InputActions.UploadImage}</span>
           </button>
@@ -539,13 +607,7 @@ export function ChatActions(props: {
             onClick={() => runMenuAction(nextTheme)}
           >
             <span className={styles["chat-input-menu-icon"]}>
-              {theme === Theme.Auto ? (
-                <AutoIcon />
-              ) : theme === Theme.Light ? (
-                <LightIcon />
-              ) : theme === Theme.Dark ? (
-                <DarkIcon />
-              ) : null}
+              <MenuThemeIcon theme={theme} />
             </span>
             <span>{Locale.Chat.InputActions.Theme[theme]}</span>
           </button>
@@ -556,7 +618,7 @@ export function ChatActions(props: {
             onClick={() => runMenuAction(showPromptModal)}
           >
             <span className={styles["chat-input-menu-icon"]}>
-              <SettingsIcon />
+              <MenuSettingsIcon />
             </span>
             <span>{Locale.Chat.InputActions.Settings}</span>
           </button>
