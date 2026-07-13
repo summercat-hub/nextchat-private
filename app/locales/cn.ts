@@ -82,7 +82,7 @@ const cn = {
     Rename: "重命名对话",
     Typing: "正在输入…",
     Input: (_submitKey: string) => {
-      return "询问FreeChat";
+      return "询问 True Chat";
     },
     Send: "发送",
     StartSpeak: "说话",

@@ -227,6 +227,7 @@
 
 .sidebar-header {
   position: relative;
+  z-index: 2;
   padding-top: 20px;
   padding-bottom: 20px;
   display: flex;
@@ -247,10 +248,10 @@
 }
 
 .sidebar-title {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.015em;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
   animation: slide-in var(--motion-normal) var(--ease-out);
 }
 
@@ -268,6 +269,22 @@
   overflow: auto;
   overflow-x: hidden;
   touch-action: pan-y pinch-zoom;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    rgba(0, 0, 0, 0.08) 10px,
+    rgba(0, 0, 0, 0.35) 22px,
+    rgba(0, 0, 0, 0.72) 40px,
+    #000 62px
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    rgba(0, 0, 0, 0.08) 10px,
+    rgba(0, 0, 0, 0.35) 22px,
+    rgba(0, 0, 0, 0.72) 40px,
+    #000 62px
+  );
 }
 
 .chat-item-wrapper {

@@ -189,7 +189,9 @@ export function SideBarHeader(props: {
           <div className={styles["sidebar-title"]} data-tauri-drag-region>
             {title}
           </div>
-          <div className={styles["sidebar-sub-title"]}>{subTitle}</div>
+          {subTitle && (
+            <div className={styles["sidebar-sub-title"]}>{subTitle}</div>
+          )}
         </div>
         <div className={clsx(styles["sidebar-logo"], "no-dark")}>{logo}</div>
       </div>
@@ -252,8 +254,7 @@ export function SideBar(props: {
       {...props}
     >
       <SideBarHeader
-        title="Free Chat"
-        subTitle="今天想要了解哪些问题？"
+        title="True Chat"
         logo={<ChatGptIcon />}
         shouldNarrow={shouldNarrow}
       >
