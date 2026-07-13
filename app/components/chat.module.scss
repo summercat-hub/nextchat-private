@@ -43,12 +43,51 @@
 }
 
 .chat-input-actions {
+  --chat-menu-bg: rgba(255, 255, 255, 0.94);
+  --chat-menu-color: rgba(18, 18, 20, 0.95);
+  --chat-menu-icon-bg: rgba(60, 60, 67, 0.08);
+  --chat-menu-icon-color: rgba(18, 18, 20, 0.94);
+  --chat-menu-shadow:
+    0 22px 56px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
   position: absolute;
   z-index: 4;
   left: max(clamp(22px, 3vw, 36px), calc((100% - 900px) / 2 + 20px));
   bottom: calc(14px + env(safe-area-inset-bottom));
   width: 40px;
   height: 40px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .chat-input-actions {
+    --chat-menu-bg: rgba(28, 28, 30, 0.94);
+    --chat-menu-color: rgba(255, 255, 255, 0.95);
+    --chat-menu-icon-bg: rgba(255, 255, 255, 0.14);
+    --chat-menu-icon-color: rgba(255, 255, 255, 0.94);
+    --chat-menu-shadow:
+      0 24px 58px rgba(0, 0, 0, 0.46),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+}
+
+:global(.light) .chat-input-actions {
+  --chat-menu-bg: rgba(255, 255, 255, 0.94);
+  --chat-menu-color: rgba(18, 18, 20, 0.95);
+  --chat-menu-icon-bg: rgba(60, 60, 67, 0.08);
+  --chat-menu-icon-color: rgba(18, 18, 20, 0.94);
+  --chat-menu-shadow:
+    0 22px 56px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+:global(.dark) .chat-input-actions {
+  --chat-menu-bg: rgba(28, 28, 30, 0.94);
+  --chat-menu-color: rgba(255, 255, 255, 0.95);
+  --chat-menu-icon-bg: rgba(255, 255, 255, 0.14);
+  --chat-menu-icon-color: rgba(255, 255, 255, 0.94);
+  --chat-menu-shadow:
+    0 24px 58px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .chat-input-plus {
@@ -104,16 +143,14 @@
 
 .chat-input-menu {
   position: absolute;
-  left: -10px;
-  bottom: 50px;
-  min-width: 228px;
-  padding: 12px;
+  left: -14px;
+  bottom: 60px;
+  width: min(360px, calc(100vw - 36px));
+  padding: 14px;
   border-radius: 30px;
-  background: rgba(28, 28, 30, 0.92);
-  color: rgba(255, 255, 255, 0.94);
-  box-shadow:
-    0 22px 48px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: var(--chat-menu-bg);
+  color: var(--chat-menu-color);
+  box-shadow: var(--chat-menu-shadow);
   backdrop-filter: blur(26px) saturate(160%);
   -webkit-backdrop-filter: blur(26px) saturate(160%);
   transform-origin: 28px 100%;
@@ -121,18 +158,18 @@
 }
 
 .chat-input-actions-focused .chat-input-menu {
-  left: -18px;
-  bottom: 56px;
+  left: -26px;
+  bottom: 76px;
 }
 
 .chat-input-menu-item {
   width: 100%;
-  min-height: 54px;
+  min-height: 72px;
   border: 0;
-  padding: 6px 10px 6px 4px;
+  padding: 8px 12px 8px 8px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 18px;
   border-radius: 18px;
   background: transparent;
   color: inherit;
@@ -156,7 +193,7 @@
 }
 
 .chat-input-menu-item-disabled {
-  opacity: 0.42;
+  opacity: 0.78;
   cursor: default;
 
   &:active {
@@ -170,26 +207,30 @@
 }
 
 .chat-input-menu-icon {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.12);
-  color: inherit;
+  background: var(--chat-menu-icon-bg);
+  color: var(--chat-menu-icon-color);
 
   svg {
-    width: 21px;
-    height: 21px;
+    width: 24px;
+    height: 24px;
+    display: block;
+    overflow: visible;
   }
 
-  svg path[style*="stroke:#333"] {
+  svg *[stroke="#333"],
+  svg *[style*="stroke:#333"] {
     stroke: currentColor !important;
   }
 
-  svg path[style*="fill:#333"] {
+  svg *[fill="#333"],
+  svg *[style*="fill:#333"] {
     fill: currentColor !important;
   }
 }
@@ -880,7 +921,7 @@
   line-height: 1.35;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  padding: 13px 58px 13px 54px;
+  padding: 13px 58px 13px 68px;
   resize: none;
   outline: none;
   box-sizing: border-box;
@@ -955,7 +996,7 @@
 
   .chat-input {
     min-height: 50px;
-    padding: 13px 58px 13px 54px;
+    padding: 13px 58px 13px 68px;
     font-size: 16px !important;
   }
 
