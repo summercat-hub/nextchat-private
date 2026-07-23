@@ -25,6 +25,7 @@ import { useCompactScreen, useMobileScreen } from "../utils";
 import dynamic from "next/dynamic";
 import clsx from "clsx";
 import { isMcpEnabled } from "../mcp/actions";
+import { useMobileRubberBandScroll } from "./mobile-rubber-band";
 
 const ChatList = dynamic(async () => (await import("./chat-list")).ChatList, {
   loading: () => null,
@@ -206,9 +207,19 @@ export function SideBarBody(props: {
   onClick?: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
 }) {
   const { onClick, children } = props;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  useMobileRubberBandScroll(scrollRef, contentRef);
+
   return (
-    <div className={styles["sidebar-body"]} onClick={onClick}>
-      {children}
+    <div className={styles["sidebar-body"]} ref={scrollRef}>
+      <div
+        className={styles["mobile-rubber-band-content"]}
+        ref={contentRef}
+        onClick={onClick}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -280,17 +291,6 @@ export function SideBar(props: {
       </SideBarBody>
       <SideBarTail
         primaryAction={
-          <div className={styles["sidebar-action"]}>
-            <Link to={Path.Settings}>
-              <IconButton
-                aria={Locale.Settings.Title}
-                icon={<SettingsIcon />}
-                shadow
-              />
-            </Link>
-          </div>
-        }
-        secondaryAction={
           <IconButton
             icon={<AddIcon />}
             text={shouldNarrow ? undefined : Locale.Home.NewChat}
@@ -300,6 +300,17 @@ export function SideBar(props: {
             }}
             shadow
           />
+        }
+        secondaryAction={
+          <div className={styles["sidebar-action"]}>
+            <Link to={Path.Settings}>
+              <IconButton
+                aria={Locale.Settings.Title}
+                icon={<SettingsIcon />}
+                shadow
+              />
+            </Link>
+          </div>
         }
       />
     </SideBarContainer>

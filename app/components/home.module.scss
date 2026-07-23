@@ -135,6 +135,10 @@
     background: var(--mobile-sidebar-surface);
   }
 
+  .sidebar-body {
+    overscroll-behavior-y: none;
+  }
+
   .sidebar {
     position: absolute;
     top: 0;
@@ -283,6 +287,11 @@
     rgba(0, 0, 0, 0.78) 10px,
     #000 18px
   );
+}
+
+.mobile-rubber-band-content {
+  min-height: 100%;
+  transform: translate3d(0, 0, 0);
 }
 
 .chat-item-wrapper {
