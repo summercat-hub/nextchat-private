@@ -968,9 +968,17 @@
     inset 0 1px 0 var(--material-highlight),
     0 4px 18px rgba(0, 0, 0, 0.08);
   transition:
+    min-height var(--motion-normal) var(--ease-out),
+    border-radius var(--motion-normal) var(--ease-out),
     border-color var(--motion-fast) var(--ease-out),
     box-shadow var(--motion-fast) var(--ease-out),
     transform var(--motion-fast) var(--ease-out);
+}
+
+.chat-input-panel-inner-expanded {
+  min-height: 96px;
+  align-items: stretch;
+  border-radius: 28px;
 }
 
 .chat-input-panel-inner-attach {
@@ -978,7 +986,12 @@
   align-items: flex-end;
 }
 
-.chat-input-panel-inner:has(.chat-input:focus) {
+.chat-input-panel-inner-expanded.chat-input-panel-inner-attach {
+  min-height: 172px;
+}
+
+.chat-input-panel-inner:has(.chat-input:focus),
+.chat-input-panel-inner-expanded {
   box-shadow:
     inset 0 1px 0 var(--material-highlight),
     0 8px 28px rgba(0, 0, 0, 0.12);
@@ -1003,6 +1016,23 @@
   box-sizing: border-box;
   min-height: 50px;
   max-height: 132px;
+  overflow-y: auto;
+  transition:
+    min-height var(--motion-normal) var(--ease-out),
+    max-height var(--motion-normal) var(--ease-out),
+    padding var(--motion-normal) var(--ease-out),
+    border-radius var(--motion-normal) var(--ease-out);
+}
+
+.chat-input-panel-inner-expanded .chat-input {
+  min-height: 96px;
+  max-height: min(38vh, 220px);
+  border-radius: 28px;
+  padding: 14px 16px 56px 18px;
+}
+
+.chat-input-panel-inner-expanded.chat-input-panel-inner-attach .chat-input {
+  padding-top: 92px;
 }
 
 .chat-input:focus,
@@ -1076,9 +1106,35 @@
     font-size: 16px !important;
   }
 
+  .chat-input-panel-inner-expanded {
+    min-height: 98px;
+    border-radius: 28px;
+  }
+
+  .chat-input-panel-inner-expanded .chat-input {
+    min-height: 98px;
+    max-height: min(36vh, 210px);
+    padding: 14px 16px 56px 18px;
+  }
+
+  .chat-input-panel-inner-expanded.chat-input-panel-inner-attach {
+    min-height: 174px;
+  }
+
+  .chat-input-panel-inner-expanded.chat-input-panel-inner-attach .chat-input {
+    padding-top: 92px;
+  }
+
   .chat-input-send {
     right: 7px;
     bottom: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-input-panel-inner,
+  .chat-input {
+    transition: none;
   }
 }
 

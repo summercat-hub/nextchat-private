@@ -820,6 +820,8 @@ function _Chat() {
   const [attachImages, setAttachImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const canSubmit = userInput.trim().length > 0 || attachImages.length > 0;
+  const inputExpanded =
+    inputFocused || userInput.length > 0 || attachImages.length > 0;
 
   // prompt hints
   const promptStore = usePromptStore();
@@ -1842,6 +1844,7 @@ function _Chat() {
               />
               <label
                 className={clsx(styles["chat-input-panel-inner"], {
+                  [styles["chat-input-panel-inner-expanded"]]: inputExpanded,
                   [styles["chat-input-panel-inner-attach"]]:
                     attachImages.length !== 0,
                 })}
