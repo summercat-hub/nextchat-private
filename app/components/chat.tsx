@@ -775,10 +775,81 @@ export function ChatActions(props: {
     return filteredModels;
   }, [allModels]);
   const [showUploadImage, setShowUploadImage] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuState, setMenuState] = useState<
+    "closed" | "opening" | "open" | "closing"
+  >("closed");
+  const menuMounted = menuState !== "closed";
+  const menuExpanded = menuState === "open";
+
+  const closeMenu = useCallback(() => {
+    setMenuState((state) => {
+      if (state === "closed" || state === "closing") return state;
+      return "closing";
+    });
+  }, []);
+
+  const openMenu = useCallback(() => {
+    setMenuState((state) => (state === "closed" ? "opening" : state));
+  }, []);
 
   useEffect(() => {
-    if (voiceActive) setMenuOpen(false);
+    if (menuState !== "opening") return;
+
+    const frame = window.requestAnimationFrame(() => {
+      setMenuState((state) => (state === "opening" ? "open" : state));
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [menuState]);
+
+  useEffect(() => {
+    if (menuState !== "closing") return;
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const timeout = window.setTimeout(
+      () => setMenuState("closed"),
+      reduceMotion ? 0 : 250,
+    );
+
+    return () => window.clearTimeout(timeout);
+  }, [menuState]);
+
+  useEffect(() => {
+    if (!menuMounted || menuState === "closing") return;
+
+    const closeFromOutsidePointer = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) closeMenu();
+    };
+    const closeFromViewportMovement = () => closeMenu();
+
+    document.addEventListener("pointerdown", closeFromOutsidePointer, true);
+    window.addEventListener("scroll", closeFromViewportMovement, true);
+    window.addEventListener("wheel", closeFromViewportMovement, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("touchmove", closeFromViewportMovement, {
+      capture: true,
+      passive: true,
+    });
+
+    return () => {
+      document.removeEventListener(
+        "pointerdown",
+        closeFromOutsidePointer,
+        true,
+      );
+      window.removeEventListener("scroll", closeFromViewportMovement, true);
+      window.removeEventListener("wheel", closeFromViewportMovement, true);
+      window.removeEventListener("touchmove", closeFromViewportMovement, true);
+    };
+  }, [closeMenu, menuMounted, menuState]);
+
+  useEffect(() => {
+    if (voiceActive) setMenuState("closed");
   }, [voiceActive]);
 
   function nextTheme() {
@@ -813,15 +884,16 @@ export function ChatActions(props: {
   }, [chatStore, currentModel, models, session, setAttachImages, setUploading]);
 
   const runMenuAction = (action: () => void) => {
+    closeMenu();
     action();
-    setMenuOpen(false);
   };
 
   return (
     <div
       className={clsx(
         styles["chat-input-actions"],
-        menuOpen && styles["chat-input-actions-open"],
+        menuMounted && styles["chat-input-actions-open"],
+        menuState === "closing" && styles["chat-input-actions-closing"],
         inputFocused && styles["chat-input-actions-focused"],
         voiceActive && styles["chat-input-actions-recording"],
       )}
@@ -831,13 +903,14 @@ export function ChatActions(props: {
         className={styles["chat-input-plus"]}
         data-testid="chat-input-plus"
         aria-label={voiceActive ? "取消录音" : Locale.UI.Config}
-        aria-expanded={voiceActive ? false : menuOpen}
+        aria-expanded={voiceActive ? false : menuExpanded}
+        disabled={!voiceActive && menuMounted}
         onPointerDown={(event) => event.preventDefault()}
         onClick={() => {
           if (voiceActive) {
             onCancelVoice();
           } else {
-            setMenuOpen((open) => !open);
+            openMenu();
           }
         }}
       >
@@ -850,8 +923,17 @@ export function ChatActions(props: {
         />
       </button>
 
-      {menuOpen && (
-        <div className={styles["chat-input-menu"]} role="menu">
+      {menuMounted && (
+        <div
+          ref={menuRef}
+          className={clsx(
+            styles["chat-input-menu"],
+            menuState === "open" && styles["chat-input-menu-open"],
+            menuState === "closing" && styles["chat-input-menu-closing"],
+          )}
+          role="menu"
+          aria-hidden={menuState === "closing"}
+        >
           <button
             type="button"
             className={clsx(
