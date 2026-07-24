@@ -214,6 +214,7 @@ function shouldIgnoreDrawerGesture(
       "button",
       "a",
       "[contenteditable]",
+      "[data-horizontal-gesture-surface]",
       "code",
       "pre",
       "img",

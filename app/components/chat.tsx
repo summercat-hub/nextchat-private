@@ -694,9 +694,20 @@ export function EditMessageModal(props: { onClose: () => void }) {
 
 export function DeleteImageButton(props: { deleteImage: () => void }) {
   return (
-    <div className={styles["delete-image"]} onClick={props.deleteImage}>
-      <DeleteIcon />
-    </div>
+    <button
+      type="button"
+      className={styles["delete-image"]}
+      aria-label={Locale.Chat.Actions.Delete}
+      title={Locale.Chat.Actions.Delete}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        props.deleteImage();
+      }}
+    >
+      <CloseIcon />
+    </button>
   );
 }
 
@@ -1850,6 +1861,31 @@ function _Chat() {
                 })}
                 htmlFor="chat-input"
               >
+                {attachImages.length !== 0 && (
+                  <div
+                    className={styles["attach-images"]}
+                    data-horizontal-gesture-surface=""
+                    aria-label="已上传图片"
+                  >
+                    {attachImages.map((image, index) => (
+                      <div
+                        key={index}
+                        className={styles["attach-image"]}
+                        style={{ backgroundImage: `url("${image}")` }}
+                      >
+                        <div className={styles["attach-image-mask"]}>
+                          <DeleteImageButton
+                            deleteImage={() => {
+                              setAttachImages(
+                                attachImages.filter((_, i) => i !== index),
+                              );
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <textarea
                   id="chat-input"
                   ref={inputRef}
@@ -1872,29 +1908,10 @@ function _Chat() {
                     fontFamily: config.fontFamily,
                   }}
                 />
-                {attachImages.length != 0 && (
-                  <div className={styles["attach-images"]}>
-                    {attachImages.map((image, index) => {
-                      return (
-                        <div
-                          key={index}
-                          className={styles["attach-image"]}
-                          style={{ backgroundImage: `url("${image}")` }}
-                        >
-                          <div className={styles["attach-image-mask"]}>
-                            <DeleteImageButton
-                              deleteImage={() => {
-                                setAttachImages(
-                                  attachImages.filter((_, i) => i !== index),
-                                );
-                              }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <div
+                  className={styles["chat-input-toolbar"]}
+                  aria-hidden="true"
+                />
                 <button
                   type="button"
                   aria-label={Locale.Chat.Send}
