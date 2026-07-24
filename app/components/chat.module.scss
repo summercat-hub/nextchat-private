@@ -944,8 +944,19 @@
   z-index: 1;
 }
 
+.chat-message:not(.chat-message-user)
+  > .chat-message-container
+  > .chat-message-item {
+  padding-right: 0;
+  padding-left: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
 .chat-message-user > .chat-message-container > .chat-message-item {
-  background-color: var(--second);
+  background-color: var(--surface-secondary);
 
   &:hover {
     min-width: 0;
