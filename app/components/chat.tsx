@@ -615,16 +615,22 @@ const INTELLIGENCE_OPTIONS = [
     id: "low",
     label: "低",
     model: LOW_INTELLIGENCE_MODEL,
+    reasoningEffort: "none",
+    maxTokens: 8192,
   },
   {
     id: "medium",
     label: "中",
     model: MEDIUM_INTELLIGENCE_MODEL,
+    reasoningEffort: "none",
+    maxTokens: 8192,
   },
   {
     id: "high",
     label: "高",
-    disabled: true,
+    model: MEDIUM_INTELLIGENCE_MODEL,
+    reasoningEffort: "high",
+    maxTokens: 16000,
   },
 ] as const;
 
@@ -634,9 +640,16 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
   const selectorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const currentModel = session.mask.modelConfig.model;
+  const currentReasoningEffort =
+    session.mask.modelConfig.reasoning_effort ?? "none";
   const currentLevel =
-    currentModel === LOW_INTELLIGENCE_MODEL ? "low" : "medium";
-  const currentLabel = currentLevel === "low" ? "低" : "中";
+    currentReasoningEffort === "high"
+      ? "high"
+      : currentModel === LOW_INTELLIGENCE_MODEL
+      ? "low"
+      : "medium";
+  const currentLabel =
+    currentLevel === "low" ? "低" : currentLevel === "high" ? "高" : "中";
 
   useEffect(() => {
     if (!props.visible || props.disabled) setOpen(false);
@@ -688,7 +701,6 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
             <div className={styles["chat-intelligence-title"]}>智能</div>
             {INTELLIGENCE_OPTIONS.map((option) => {
               const selected = option.id === currentLevel;
-              const unavailable = "disabled" in option && option.disabled;
 
               return (
                 <button
@@ -696,26 +708,28 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
                   type="button"
                   role="menuitemradio"
                   aria-checked={selected}
-                  aria-disabled={unavailable}
-                  disabled={unavailable}
                   className={clsx(
                     styles["chat-intelligence-option"],
                     selected && styles["chat-intelligence-option-selected"],
-                    unavailable && styles["chat-intelligence-option-disabled"],
                   )}
                   onPointerDown={(event) => event.preventDefault()}
                   onClick={() => {
-                    if (unavailable || !("model" in option)) return;
                     chatStore.updateTargetSession(session, (targetSession) => {
-                      targetSession.mask.modelConfig.model = option.model;
-                      targetSession.mask.modelConfig.providerName =
-                        ServiceProvider.OpenAI;
+                      const modelConfig = targetSession.mask.modelConfig;
+                      modelConfig.model = option.model;
+                      modelConfig.providerName = ServiceProvider.OpenAI;
+                      modelConfig.temperature = 1.0;
+                      modelConfig.top_p = 0.95;
+                      modelConfig.top_k = 64;
+                      modelConfig.reasoning_effort = option.reasoningEffort;
+                      modelConfig.max_tokens = option.maxTokens;
+                      modelConfig.service_tier = "default";
                     });
                     setOpen(false);
                   }}
                 >
                   <span>{option.label}</span>
-                  {selected && !unavailable && (
+                  {selected && (
                     <svg
                       className={styles["chat-intelligence-check"]}
                       viewBox="0 0 18 18"
@@ -2318,7 +2332,16 @@ function _Chat() {
                       i > 0 &&
                       !(message.preview || message.content.length === 0) &&
                       !isContext;
-                    const showTyping = message.preview || message.streaming;
+                    const messageText = getMessageTextContent(message);
+                    const showThinking =
+                      !!message.reasoning &&
+                      !!message.streaming &&
+                      messageText.length === 0;
+                    const showTyping =
+                      !!message.preview ||
+                      (!!message.streaming &&
+                        !message.reasoning &&
+                        messageText.length === 0);
 
                     const shouldShowClearContextDivider =
                       i === clearContextIndex - 1;
@@ -2333,11 +2356,35 @@ function _Chat() {
                           }
                         >
                           <div className={styles["chat-message-container"]}>
-                            {message?.tools?.length == 0 && showTyping && (
-                              <div className={styles["chat-message-status"]}>
-                                {Locale.Chat.Typing}
-                              </div>
-                            )}
+                            {message?.tools?.length == 0 &&
+                              (showThinking || showTyping) && (
+                                <div
+                                  className={clsx(
+                                    styles["chat-message-status"],
+                                    showThinking &&
+                                      styles["chat-message-thinking"],
+                                  )}
+                                  aria-live="polite"
+                                >
+                                  {showThinking ? (
+                                    <>
+                                      <span>正在思考</span>
+                                      <span
+                                        className={
+                                          styles["chat-message-thinking-dots"]
+                                        }
+                                        aria-hidden="true"
+                                      >
+                                        <span>.</span>
+                                        <span>.</span>
+                                        <span>.</span>
+                                      </span>
+                                    </>
+                                  ) : (
+                                    Locale.Chat.Typing
+                                  )}
+                                </div>
+                              )}
                             {/*@ts-ignore*/}
                             {message?.tools?.length > 0 && (
                               <div className={styles["chat-message-tools"]}>

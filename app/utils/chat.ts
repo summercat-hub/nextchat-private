@@ -418,45 +418,76 @@ export function streamWithThink(
   let responseRes: Response;
   let isInThinkingMode = false;
   let lastIsThinking = false;
-  let lastIsThinkingTagged = false; //between <think> and </think> tags
+  let lastIsThinkingTagged = false; // between model-specific thought tags
   let hiddenThinkingText = "";
+  let pendingTaggedContent = "";
+  const thinkingStartTags = [
+    "<think>",
+    "<|channel>thought\n",
+    "<|channel>thought",
+  ];
+  const thinkingEndTags = ["</think>", "<channel|>"];
+
+  function findFirstTag(text: string, tags: string[]) {
+    let match: { index: number; tag: string } | undefined;
+    for (const tag of tags) {
+      const index = text.indexOf(tag);
+      if (index >= 0 && (!match || index < match.index)) {
+        match = { index, tag };
+      }
+    }
+    return match;
+  }
+
+  function trailingTagPrefixLength(text: string, tags: string[]) {
+    const maxLength = Math.min(
+      text.length,
+      Math.max(...tags.map((tag) => tag.length - 1)),
+    );
+    for (let length = maxLength; length > 0; length -= 1) {
+      const suffix = text.slice(-length);
+      if (tags.some((tag) => tag.startsWith(suffix))) {
+        return length;
+      }
+    }
+    return 0;
+  }
 
   function stripTaggedThinkingContent(content: string) {
     let visibleContent = "";
-    let restContent = content;
+    pendingTaggedContent += content;
 
-    while (restContent.length > 0) {
-      if (lastIsThinkingTagged) {
-        const endIndex = restContent.indexOf("</think>");
-        if (endIndex < 0) {
-          hiddenThinkingText += restContent;
-          return visibleContent;
+    while (pendingTaggedContent.length > 0) {
+      const tags = lastIsThinkingTagged ? thinkingEndTags : thinkingStartTags;
+      const match = findFirstTag(pendingTaggedContent, tags);
+
+      if (match) {
+        const beforeTag = pendingTaggedContent.slice(0, match.index);
+        if (lastIsThinkingTagged) {
+          hiddenThinkingText += beforeTag;
+        } else {
+          visibleContent += beforeTag;
         }
-
-        hiddenThinkingText += restContent.slice(0, endIndex);
-        restContent = restContent.slice(endIndex + "</think>".length);
-        lastIsThinkingTagged = false;
+        pendingTaggedContent = pendingTaggedContent.slice(
+          match.index + match.tag.length,
+        );
+        lastIsThinkingTagged = !lastIsThinkingTagged;
         continue;
       }
 
-      const startIndex = restContent.indexOf("<think>");
-      if (startIndex < 0) {
-        visibleContent += restContent;
-        break;
+      const retainedLength = trailingTagPrefixLength(
+        pendingTaggedContent,
+        tags,
+      );
+      const safeLength = pendingTaggedContent.length - retainedLength;
+      const safeText = pendingTaggedContent.slice(0, safeLength);
+      if (lastIsThinkingTagged) {
+        hiddenThinkingText += safeText;
+      } else {
+        visibleContent += safeText;
       }
-
-      visibleContent += restContent.slice(0, startIndex);
-      restContent = restContent.slice(startIndex + "<think>".length);
-
-      const endIndex = restContent.indexOf("</think>");
-      if (endIndex < 0) {
-        hiddenThinkingText += restContent;
-        lastIsThinkingTagged = true;
-        break;
-      }
-
-      hiddenThinkingText += restContent.slice(0, endIndex);
-      restContent = restContent.slice(endIndex + "</think>".length);
+      pendingTaggedContent = pendingTaggedContent.slice(safeLength);
+      break;
     }
 
     return visibleContent;
@@ -558,8 +589,20 @@ export function streamWithThink(
         return;
       }
       console.debug("[ChatAPI] end");
-      if ((responseText + remainText).length === 0 && hiddenThinkingText.trim()) {
-        remainText = "模型这次只返回了思考过程，没有返回最终答案。请重新发送一次。";
+      if (pendingTaggedContent) {
+        if (lastIsThinkingTagged) {
+          hiddenThinkingText += pendingTaggedContent;
+        } else {
+          remainText += pendingTaggedContent;
+        }
+        pendingTaggedContent = "";
+      }
+      if (
+        (responseText + remainText).length === 0 &&
+        hiddenThinkingText.trim()
+      ) {
+        remainText =
+          "模型这次只返回了思考过程，没有返回最终答案。请重新发送一次。";
       }
       finished = true;
       options.onFinish(responseText + remainText, responseRes);
@@ -664,8 +707,10 @@ export function streamWithThink(
 
           isInThinkingMode = false;
           if (wasThinking) {
-            const hasVisibleText = responseText.length > 0 || remainText.length > 0;
-            remainText += (hasVisibleText ? "\n\n" : "") + chunk.content.trimStart();
+            const hasVisibleText =
+              responseText.length > 0 || remainText.length > 0;
+            remainText +=
+              (hasVisibleText ? "\n\n" : "") + chunk.content.trimStart();
           } else {
             remainText += chunk.content;
           }

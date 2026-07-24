@@ -40,8 +40,11 @@ const config = getClientConfig();
 
 const PRIVATE_DEFAULT_MODEL = "google/gemma-4-31B-it" as ModelType;
 const PRIVATE_DEFAULT_PROVIDER = ServiceProvider.OpenAI;
-const PRIVATE_DEFAULT_TEMPERATURE = 0.4;
-const PRIVATE_DEFAULT_MAX_TOKENS = 16000;
+const PRIVATE_DEFAULT_TEMPERATURE = 1.0;
+const PRIVATE_DEFAULT_TOP_P = 0.95;
+const PRIVATE_DEFAULT_TOP_K = 64;
+const PRIVATE_DEFAULT_MAX_TOKENS = 8192;
+const PRIVATE_HIGH_MAX_TOKENS = 16000;
 const PRIVATE_DEFAULT_HISTORY_MESSAGE_COUNT = 24;
 const PRIVATE_DEFAULT_COMPRESS_THRESHOLD = 4000;
 
@@ -53,12 +56,41 @@ export function applyPrivateChatDefaults(modelConfig: ModelConfig) {
     modelConfig.providerName = PRIVATE_DEFAULT_PROVIDER;
   }
 
-  if (modelConfig.temperature === 0.5 || modelConfig.temperature == null) {
+  if (
+    modelConfig.temperature === 0.4 ||
+    modelConfig.temperature === 0.5 ||
+    modelConfig.temperature == null
+  ) {
     modelConfig.temperature = PRIVATE_DEFAULT_TEMPERATURE;
   }
 
-  if (modelConfig.max_tokens === 4000 || modelConfig.max_tokens == null) {
-    modelConfig.max_tokens = PRIVATE_DEFAULT_MAX_TOKENS;
+  if (modelConfig.top_p === 1 || modelConfig.top_p == null) {
+    modelConfig.top_p = PRIVATE_DEFAULT_TOP_P;
+  }
+
+  if (modelConfig.top_k == null) {
+    modelConfig.top_k = PRIVATE_DEFAULT_TOP_K;
+  }
+
+  if (modelConfig.reasoning_effort == null) {
+    modelConfig.reasoning_effort = "none";
+  }
+
+  if (modelConfig.service_tier == null) {
+    modelConfig.service_tier = "default";
+  }
+
+  const recommendedMaxTokens =
+    modelConfig.reasoning_effort === "high"
+      ? PRIVATE_HIGH_MAX_TOKENS
+      : PRIVATE_DEFAULT_MAX_TOKENS;
+  if (
+    modelConfig.max_tokens === 4000 ||
+    (modelConfig.max_tokens === 16000 &&
+      modelConfig.reasoning_effort !== "high") ||
+    modelConfig.max_tokens == null
+  ) {
+    modelConfig.max_tokens = recommendedMaxTokens;
   }
 
   if (
@@ -107,8 +139,11 @@ export const DEFAULT_CONFIG = {
     model: PRIVATE_DEFAULT_MODEL,
     providerName: PRIVATE_DEFAULT_PROVIDER,
     temperature: PRIVATE_DEFAULT_TEMPERATURE,
-    top_p: 1,
+    top_p: PRIVATE_DEFAULT_TOP_P,
+    top_k: PRIVATE_DEFAULT_TOP_K,
     max_tokens: PRIVATE_DEFAULT_MAX_TOKENS,
+    reasoning_effort: "none" as "none" | "high",
+    service_tier: "default" as "default" | "priority" | "flex",
     presence_penalty: 0,
     frequency_penalty: 0,
     sendMemory: true,

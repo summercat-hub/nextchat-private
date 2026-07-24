@@ -62,6 +62,7 @@ export type ChatMessageTool = {
 export type ChatMessage = RequestMessage & {
   date: string;
   streaming?: boolean;
+  reasoning?: boolean;
   isError?: boolean;
   id: string;
   model?: ModelType;
@@ -441,6 +442,7 @@ export const useChatStore = createPersistStore(
         const botMessage: ChatMessage = createMessage({
           role: "assistant",
           streaming: true,
+          reasoning: modelConfig.reasoning_effort === "high",
           model: modelConfig.model,
         });
 

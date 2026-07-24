@@ -65,8 +65,17 @@ export interface RequestPayload {
   presence_penalty: number;
   frequency_penalty: number;
   top_p: number;
+  top_k?: number;
   max_tokens?: number;
   max_completion_tokens?: number;
+  reasoning?: {
+    enabled: boolean;
+  };
+  service_tier?: "default" | "priority" | "flex";
+  stream_options?: {
+    include_usage: boolean;
+    continuous_usage_stats: boolean;
+  };
 }
 
 export interface DalleRequestPayload {
@@ -200,7 +209,10 @@ export class ChatGPTApi implements LLMApi {
       options.config.model.startsWith("o1") ||
       options.config.model.startsWith("o3") ||
       options.config.model.startsWith("o4-mini");
-    const isGpt5 =  options.config.model.startsWith("gpt-5");
+    const isGpt5 = options.config.model.startsWith("gpt-5");
+    const isGemma4 = /google\/gemma-4-/i.test(modelConfig.model);
+    const reasoningEnabled =
+      isGemma4 && modelConfig.reasoning_effort === "high";
     if (isDalle3) {
       const prompt = getMessageTextContent(
         options.messages.slice(-1)?.pop() as any,
@@ -226,25 +238,45 @@ export class ChatGPTApi implements LLMApi {
           messages.push({ role: v.role, content });
       }
 
-      // O1 not support image, tools (plugin in ChatGPTNextWeb) and system, stream, logprobs, temperature, top_p, n, presence_penalty, frequency_penalty yet.
+      if (reasoningEnabled) {
+        const thinkingToken = "<|think|>";
+        const systemMessage = messages.find(
+          (message) => message.role === "system",
+        );
+        if (systemMessage && typeof systemMessage.content === "string") {
+          if (!systemMessage.content.startsWith(thinkingToken)) {
+            systemMessage.content = `${thinkingToken}\n${systemMessage.content}`;
+          }
+        } else {
+          messages.unshift({ role: "system", content: thinkingToken });
+        }
+      }
+
+      // O1 does not support the regular sampling controls used below.
       requestPayload = {
         messages,
         stream: options.config.stream,
         model: modelConfig.model,
-        temperature: (!isO1OrO3 && !isGpt5) ? modelConfig.temperature : 1,
+        temperature: !isO1OrO3 && !isGpt5 ? modelConfig.temperature : 1,
         presence_penalty: !isO1OrO3 ? modelConfig.presence_penalty : 0,
         frequency_penalty: !isO1OrO3 ? modelConfig.frequency_penalty : 0,
         top_p: !isO1OrO3 ? modelConfig.top_p : 1,
-        // max_tokens: Math.max(modelConfig.max_tokens, 1024),
-        // Please do not ask me why not send max_tokens, no reason, this param is just shit, I dont want to explain anymore.
+        top_k: isGemma4 ? modelConfig.top_k : undefined,
+        reasoning: isGemma4 ? { enabled: reasoningEnabled } : undefined,
+        service_tier:
+          isGemma4 && modelConfig.service_tier !== "default"
+            ? modelConfig.service_tier
+            : undefined,
+        stream_options: options.config.stream
+          ? { include_usage: true, continuous_usage_stats: false }
+          : undefined,
       };
 
       if (isGpt5) {
-  	// Remove max_tokens if present
-  	delete requestPayload.max_tokens;
-  	// Add max_completion_tokens (or max_completion_tokens if that's what you meant)
-  	requestPayload["max_completion_tokens"] = modelConfig.max_tokens;
-
+        // Remove max_tokens if present
+        delete requestPayload.max_tokens;
+        // Add max_completion_tokens (or max_completion_tokens if that's what you meant)
+        requestPayload["max_completion_tokens"] = modelConfig.max_tokens;
       } else if (isO1OrO3) {
         // by default the o1/o3 models will not attempt to produce output that includes markdown formatting
         // manually add "Formatting re-enabled" developer message to encourage markdown inclusion in model responses
@@ -258,14 +290,77 @@ export class ChatGPTApi implements LLMApi {
         requestPayload["max_completion_tokens"] = modelConfig.max_tokens;
       }
 
-
-      // add max_tokens to vision model
-      if (visionModel && !isO1OrO3 && ! isGpt5) {
-        requestPayload["max_tokens"] = Math.max(modelConfig.max_tokens, 4000);
+      if (!isO1OrO3 && !isGpt5) {
+        requestPayload["max_tokens"] = Math.min(
+          Math.max(modelConfig.max_tokens, 1024),
+          16384,
+        );
       }
     }
 
-    console.log("[Request] openai payload: ", requestPayload);
+    const requestStartedAt = Date.now();
+    let firstTokenAt: number | undefined;
+    let firstVisibleTokenAt: number | undefined;
+    let responseUsage:
+      | {
+          prompt_tokens?: number;
+          completion_tokens?: number;
+          total_tokens?: number;
+          prompt_tokens_details?: { cached_tokens?: number };
+        }
+      | undefined;
+    let estimatedCost: number | undefined;
+    let confirmedServiceTier: string | undefined;
+
+    const logRequestMetrics = (finishedAt = Date.now()) => {
+      console.info("[DeepInfra Metrics]", {
+        model: modelConfig.model,
+        reasoning: reasoningEnabled ? "high" : "none",
+        serviceTier:
+          confirmedServiceTier ?? modelConfig.service_tier ?? "default",
+        messageCount:
+          "messages" in requestPayload ? requestPayload.messages.length : 1,
+        temperature:
+          "temperature" in requestPayload
+            ? requestPayload.temperature
+            : undefined,
+        topP: "top_p" in requestPayload ? requestPayload.top_p : undefined,
+        topK: "top_k" in requestPayload ? requestPayload.top_k : undefined,
+        maxTokens:
+          "max_tokens" in requestPayload
+            ? requestPayload.max_tokens
+            : undefined,
+        timeToFirstTokenMs: firstTokenAt
+          ? firstTokenAt - requestStartedAt
+          : undefined,
+        timeToVisibleAnswerMs: firstVisibleTokenAt
+          ? firstVisibleTokenAt - requestStartedAt
+          : undefined,
+        totalDurationMs: finishedAt - requestStartedAt,
+        promptTokens: responseUsage?.prompt_tokens,
+        completionTokens: responseUsage?.completion_tokens,
+        totalTokens: responseUsage?.total_tokens,
+        cachedPromptTokens: responseUsage?.prompt_tokens_details?.cached_tokens,
+        estimatedCost,
+      });
+    };
+
+    console.info("[DeepInfra Request]", {
+      model: modelConfig.model,
+      reasoning: reasoningEnabled ? "high" : "none",
+      serviceTier: modelConfig.service_tier ?? "default",
+      messageCount:
+        "messages" in requestPayload ? requestPayload.messages.length : 1,
+      temperature:
+        "temperature" in requestPayload
+          ? requestPayload.temperature
+          : undefined,
+      topP: "top_p" in requestPayload ? requestPayload.top_p : undefined,
+      topK: "top_k" in requestPayload ? requestPayload.top_k : undefined,
+      maxTokens:
+        "max_tokens" in requestPayload ? requestPayload.max_tokens : undefined,
+      stream: "stream" in requestPayload ? requestPayload.stream : false,
+    });
 
     const shouldStream = !isDalle3 && !!options.config.stream;
     const controller = new AbortController();
@@ -326,11 +421,19 @@ export class ChatGPTApi implements LLMApi {
           (text: string, runTools: ChatMessageTool[]) => {
             // console.log("parseSSE", text, runTools);
             const json = JSON.parse(text);
+            responseUsage = json.usage ?? responseUsage;
+            estimatedCost =
+              json.estimated_cost ??
+              json.usage?.estimated_cost ??
+              estimatedCost;
+            confirmedServiceTier = json.service_tier ?? confirmedServiceTier;
+
             const choices = json.choices as Array<{
               delta: {
                 content: string;
                 tool_calls: ChatMessageTool[];
                 reasoning_content: string | null;
+                reasoning?: string | null;
               };
             }>;
 
@@ -356,8 +459,17 @@ export class ChatGPTApi implements LLMApi {
               }
             }
 
-            const reasoning = choices[0]?.delta?.reasoning_content;
+            const reasoning =
+              choices[0]?.delta?.reasoning_content ??
+              choices[0]?.delta?.reasoning;
             const content = choices[0]?.delta?.content;
+            const tokenReceivedAt = Date.now();
+            if ((reasoning || content) && !firstTokenAt) {
+              firstTokenAt = tokenReceivedAt;
+            }
+            if (content && !firstVisibleTokenAt) {
+              firstVisibleTokenAt = tokenReceivedAt;
+            }
 
             // Skip if both content and reasoning_content are empty or null
             if (
@@ -404,7 +516,13 @@ export class ChatGPTApi implements LLMApi {
               ...toolCallResult,
             );
           },
-          options,
+          {
+            ...options,
+            onFinish(message: string, responseRes: Response) {
+              logRequestMetrics();
+              options.onFinish(message, responseRes);
+            },
+          },
         );
       } else {
         const chatPayload = {
@@ -424,7 +542,16 @@ export class ChatGPTApi implements LLMApi {
         clearTimeout(requestTimeoutId);
 
         const resJson = await res.json();
+        responseUsage = resJson.usage ?? responseUsage;
+        estimatedCost =
+          resJson.estimated_cost ??
+          resJson.usage?.estimated_cost ??
+          estimatedCost;
+        confirmedServiceTier = resJson.service_tier ?? confirmedServiceTier;
+        firstTokenAt = firstTokenAt ?? Date.now();
+        firstVisibleTokenAt = firstVisibleTokenAt ?? firstTokenAt;
         const message = await this.extractMessage(resJson);
+        logRequestMetrics();
         options.onFinish(message, res);
       }
     } catch (e) {
