@@ -97,7 +97,9 @@ import { createTTSPlayer } from "../utils/audio";
 import { isEmpty } from "lodash-es";
 import clsx from "clsx";
 import { useMobileRubberBandScroll } from "./mobile-rubber-band";
+import { useMobileHorizontalRubberBandScroll } from "./mobile-horizontal-rubber-band";
 
+const MAX_ATTACH_IMAGES = 10;
 const localStorage = safeLocalStorage();
 
 const ttsPlayer = createTTSPlayer();
@@ -829,10 +831,38 @@ function _Chat() {
   const isMobileScreen = useMobileScreen();
   const navigate = useNavigate();
   const [attachImages, setAttachImages] = useState<string[]>([]);
+  const attachmentScrollRef = useRef<HTMLDivElement>(null);
+  const attachmentTrackRef = useRef<HTMLDivElement>(null);
+  const previousAttachmentCountRef = useRef(0);
+  useMobileHorizontalRubberBandScroll(
+    attachmentScrollRef,
+    attachmentTrackRef,
+    attachImages.length > 0,
+  );
   const [uploading, setUploading] = useState(false);
   const canSubmit = userInput.trim().length > 0 || attachImages.length > 0;
   const inputExpanded =
     inputFocused || userInput.length > 0 || attachImages.length > 0;
+
+  useEffect(() => {
+    const previousCount = previousAttachmentCountRef.current;
+    previousAttachmentCountRef.current = attachImages.length;
+    if (attachImages.length <= previousCount) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const scrollElement = attachmentScrollRef.current;
+      if (!scrollElement) return;
+      const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      scrollElement.scrollTo({
+        left: scrollElement.scrollWidth,
+        behavior: reduceMotion ? "auto" : "smooth",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [attachImages.length]);
 
   // prompt hints
   const promptStore = usePromptStore();
@@ -1336,92 +1366,85 @@ function _Chat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const addImageFiles = useCallback(
+    async (files: File[]) => {
+      const remainingSlots = Math.max(
+        0,
+        MAX_ATTACH_IMAGES - attachImages.length,
+      );
+      if (remainingSlots === 0) {
+        showToast(`最多可添加 ${MAX_ATTACH_IMAGES} 张图片`);
+        return;
+      }
+
+      const acceptedFiles = files.slice(0, remainingSlots);
+      if (files.length > remainingSlots) {
+        showToast(`最多可添加 ${MAX_ATTACH_IMAGES} 张图片`);
+      }
+      if (acceptedFiles.length === 0) return;
+
+      setUploading(true);
+      try {
+        const uploadResults = await Promise.allSettled(
+          acceptedFiles.map((file) => uploadImageRemote(file)),
+        );
+        const uploadedImages = uploadResults.flatMap((result) =>
+          result.status === "fulfilled" ? [result.value] : [],
+        );
+        if (uploadedImages.length > 0) {
+          setAttachImages((currentImages) =>
+            currentImages.concat(uploadedImages).slice(0, MAX_ATTACH_IMAGES),
+          );
+        }
+
+        const failedUpload = uploadResults.find(
+          (result) => result.status === "rejected",
+        );
+        if (failedUpload?.status === "rejected") {
+          showToast(`部分图片上传失败：${prettyObject(failedUpload.reason)}`);
+        }
+      } finally {
+        setUploading(false);
+      }
+    },
+    [attachImages.length],
+  );
+
   const handlePaste = useCallback(
     async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const currentModel = chatStore.currentSession().mask.modelConfig.model;
-      if (!isVisionModel(currentModel)) {
-        return;
-      }
-      const items = (event.clipboardData || window.clipboardData).items;
-      for (const item of items) {
-        if (item.kind === "file" && item.type.startsWith("image/")) {
-          event.preventDefault();
-          const file = item.getAsFile();
-          if (file) {
-            const images: string[] = [];
-            images.push(...attachImages);
-            images.push(
-              ...(await new Promise<string[]>((res, rej) => {
-                setUploading(true);
-                const imagesData: string[] = [];
-                uploadImageRemote(file)
-                  .then((dataUrl) => {
-                    imagesData.push(dataUrl);
-                    setUploading(false);
-                    res(imagesData);
-                  })
-                  .catch((e) => {
-                    setUploading(false);
-                    rej(e);
-                  });
-              })),
-            );
-            const imagesLength = images.length;
+      if (!isVisionModel(currentModel)) return;
 
-            if (imagesLength > 3) {
-              images.splice(3, imagesLength - 3);
-            }
-            setAttachImages(images);
-          }
-        }
-      }
+      const items = Array.from(
+        (event.clipboardData || window.clipboardData).items,
+      );
+      const imageFiles = items
+        .filter(
+          (item) => item.kind === "file" && item.type.startsWith("image/"),
+        )
+        .map((item) => item.getAsFile())
+        .filter((file): file is File => file !== null);
+
+      if (imageFiles.length === 0) return;
+      event.preventDefault();
+      await addImageFiles(imageFiles);
     },
-    [attachImages, chatStore],
+    [addImageFiles, chatStore],
   );
 
   async function uploadImage() {
-    const images: string[] = [];
-    images.push(...attachImages);
-
-    images.push(
-      ...(await new Promise<string[]>((res, rej) => {
-        const fileInput = document.createElement("input");
-        fileInput.type = "file";
-        fileInput.accept =
-          "image/png, image/jpeg, image/webp, image/heic, image/heif";
-        fileInput.multiple = true;
-        fileInput.onchange = (event: any) => {
-          setUploading(true);
-          const files = event.target.files;
-          const imagesData: string[] = [];
-          for (let i = 0; i < files.length; i++) {
-            const file = event.target.files[i];
-            uploadImageRemote(file)
-              .then((dataUrl) => {
-                imagesData.push(dataUrl);
-                if (
-                  imagesData.length === 3 ||
-                  imagesData.length === files.length
-                ) {
-                  setUploading(false);
-                  res(imagesData);
-                }
-              })
-              .catch((e) => {
-                setUploading(false);
-                rej(e);
-              });
-          }
-        };
-        fileInput.click();
-      })),
-    );
-
-    const imagesLength = images.length;
-    if (imagesLength > 3) {
-      images.splice(3, imagesLength - 3);
-    }
-    setAttachImages(images);
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept =
+      "image/png, image/jpeg, image/webp, image/heic, image/heif";
+    fileInput.multiple = true;
+    fileInput.onchange = async (event) => {
+      const files = Array.from(
+        (event.currentTarget as HTMLInputElement).files ?? [],
+      );
+      await addImageFiles(files);
+    };
+    fileInput.click();
   }
 
   // 快捷键 shortcut keys
@@ -1863,27 +1886,33 @@ function _Chat() {
               >
                 {attachImages.length !== 0 && (
                   <div
+                    ref={attachmentScrollRef}
                     className={styles["attach-images"]}
                     data-horizontal-gesture-surface=""
-                    aria-label="已上传图片"
+                    aria-label={`已上传 ${attachImages.length} 张图片`}
                   >
-                    {attachImages.map((image, index) => (
-                      <div
-                        key={index}
-                        className={styles["attach-image"]}
-                        style={{ backgroundImage: `url("${image}")` }}
-                      >
-                        <div className={styles["attach-image-mask"]}>
-                          <DeleteImageButton
-                            deleteImage={() => {
-                              setAttachImages(
-                                attachImages.filter((_, i) => i !== index),
-                              );
-                            }}
-                          />
+                    <div
+                      ref={attachmentTrackRef}
+                      className={styles["attach-images-track"]}
+                    >
+                      {attachImages.map((image, index) => (
+                        <div
+                          key={`${image}-${index}`}
+                          className={styles["attach-image"]}
+                          style={{ backgroundImage: `url("${image}")` }}
+                        >
+                          <div className={styles["attach-image-mask"]}>
+                            <DeleteImageButton
+                              deleteImage={() => {
+                                setAttachImages(
+                                  attachImages.filter((_, i) => i !== index),
+                                );
+                              }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
                 <textarea

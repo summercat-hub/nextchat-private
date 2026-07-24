@@ -2,13 +2,10 @@
 
 .attach-images {
   width: 100%;
-  display: flex;
   flex: 0 0 auto;
-  gap: 10px;
   overflow-x: auto;
   overflow-y: hidden;
   box-sizing: border-box;
-  padding: 14px 14px 8px;
   scroll-snap-type: x proximity;
   scroll-padding-inline: 14px;
   touch-action: pan-x;
@@ -19,6 +16,16 @@
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+.attach-images-track {
+  display: flex;
+  gap: 10px;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+  padding: 14px 14px 8px;
+  transform: translate3d(0, 0, 0);
 }
 
 .attach-image {
