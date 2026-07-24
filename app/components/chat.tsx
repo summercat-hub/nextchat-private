@@ -607,6 +607,134 @@ function useScrollToBottom(
   };
 }
 
+const LOW_INTELLIGENCE_MODEL = "google/gemma-4-26B-A4B-it";
+const MEDIUM_INTELLIGENCE_MODEL = "google/gemma-4-31B-it";
+
+const INTELLIGENCE_OPTIONS = [
+  {
+    id: "low",
+    label: "低",
+    model: LOW_INTELLIGENCE_MODEL,
+  },
+  {
+    id: "medium",
+    label: "中",
+    model: MEDIUM_INTELLIGENCE_MODEL,
+  },
+  {
+    id: "high",
+    label: "高",
+    disabled: true,
+  },
+] as const;
+
+function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
+  const chatStore = useChatStore();
+  const session = chatStore.currentSession();
+  const selectorRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const currentModel = session.mask.modelConfig.model;
+  const currentLevel =
+    currentModel === LOW_INTELLIGENCE_MODEL ? "low" : "medium";
+  const currentLabel = currentLevel === "low" ? "低" : "中";
+
+  useEffect(() => {
+    if (!props.visible || props.disabled) setOpen(false);
+  }, [props.disabled, props.visible]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeWhenClickingOutside = (event: PointerEvent) => {
+      if (!selectorRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeWhenClickingOutside);
+    return () =>
+      document.removeEventListener("pointerdown", closeWhenClickingOutside);
+  }, [open]);
+
+  if (!props.visible) return null;
+
+  return (
+    <div className={styles["chat-intelligence-layer"]}>
+      <div
+        ref={selectorRef}
+        className={clsx(
+          styles["chat-intelligence-selector"],
+          open && styles["chat-intelligence-selector-open"],
+        )}
+      >
+        <button
+          type="button"
+          className={styles["chat-intelligence-trigger"]}
+          aria-label={`智能程度：${currentLabel}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          disabled={props.disabled}
+          onPointerDown={(event) => event.preventDefault()}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span>{currentLabel}</span>
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="m4.75 6.25 3.25 3.25 3.25-3.25" />
+          </svg>
+        </button>
+
+        {open && (
+          <div className={styles["chat-intelligence-menu"]} role="menu">
+            <div className={styles["chat-intelligence-title"]}>智能</div>
+            {INTELLIGENCE_OPTIONS.map((option) => {
+              const selected = option.id === currentLevel;
+              const unavailable = "disabled" in option && option.disabled;
+
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={selected}
+                  aria-disabled={unavailable}
+                  disabled={unavailable}
+                  className={clsx(
+                    styles["chat-intelligence-option"],
+                    selected && styles["chat-intelligence-option-selected"],
+                    unavailable && styles["chat-intelligence-option-disabled"],
+                  )}
+                  onPointerDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    if (unavailable || !("model" in option)) return;
+                    chatStore.updateTargetSession(session, (targetSession) => {
+                      targetSession.mask.modelConfig.model = option.model;
+                      targetSession.mask.modelConfig.providerName =
+                        ServiceProvider.OpenAI;
+                    });
+                    setOpen(false);
+                  }}
+                >
+                  <span>{option.label}</span>
+                  {selected && !unavailable && (
+                    <svg
+                      className={styles["chat-intelligence-check"]}
+                      viewBox="0 0 18 18"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="m3.75 9.25 3.25 3.25 7.25-7.25" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ChatActions(props: {
   uploadImage: () => void;
   setAttachImages: (images: string[]) => void;
@@ -1727,7 +1855,7 @@ function _Chat() {
 
   const clientConfig = useMemo(() => getClientConfig(), []);
 
-  const autoFocus = !isMobileScreen; // wont auto focus on mobile screen
+  const autoFocus = false;
   const showMaxIcon = !isMobileScreen && !clientConfig?.isApp;
 
   useCommand({
@@ -2313,6 +2441,10 @@ function _Chat() {
                 inputFocused={inputFocused}
                 voiceActive={isVoiceActive}
                 onCancelVoice={cancelVoiceInput}
+              />
+              <IntelligenceSelector
+                visible={inputExpanded}
+                disabled={isLoading || isVoiceActive}
               />
               <label
                 className={clsx(styles["chat-input-panel-inner"], {
