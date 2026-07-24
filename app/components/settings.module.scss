@@ -1,10 +1,20 @@
 .settings {
+  --list-item-title-font-size: 17px;
+
   width: 100%;
   max-width: 920px;
   margin: 0 auto;
   padding: 24px clamp(16px, 3vw, 32px) 40px;
   overflow: auto;
   box-sizing: border-box;
+  font-size: 17px;
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: inherit;
+  }
 }
 
 .advanced-settings {
@@ -22,7 +32,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 650;
   cursor: pointer;
   user-select: none;
@@ -116,7 +126,7 @@
         max-width: calc(100% - 100px);
 
         .user-prompt-title {
-          font-size: 14px;
+          font-size: 17px;
           line-height: 2;
           font-weight: bold;
         }

@@ -847,8 +847,12 @@
   border-radius: var(--radius-medium);
   background-color: var(--surface-secondary);
   padding: 12px 14px;
-  font-size: 14px;
+  font-size: 17px;
   line-height: 1.65;
+
+  :global(.markdown-body) {
+    font-size: inherit;
+  }
   user-select: text;
   word-break: break-word;
   border: 1px solid transparent;
