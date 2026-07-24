@@ -1101,7 +1101,7 @@
   line-height: 1.35;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  padding: 13px 102px 13px 62px;
+  padding: calc(25px - 0.675em) 102px calc(25px - 0.675em) 62px;
   resize: none;
   outline: none;
   box-sizing: border-box;
@@ -1339,7 +1339,7 @@
 
   .chat-input {
     min-height: 48px;
-    padding: 12px 94px 12px 54px;
+    padding: calc(24px - 0.675em) 94px calc(24px - 0.675em) 54px;
     font-size: 16px !important;
   }
 
@@ -1371,14 +1371,14 @@
 
   .chat-input-voice {
     right: 46px;
-    bottom: 6px;
+    bottom: 7px;
     width: 34px;
     height: 34px;
   }
 
   .chat-input-send {
     right: 6px;
-    bottom: 6px;
+    bottom: 7px;
     width: 34px;
     height: 34px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
