@@ -149,11 +149,11 @@
     padding-bottom: calc(14px + env(safe-area-inset-bottom));
     transform-origin: left center;
     transform: translate3d(
-        calc(var(--drawer-inverse-progress, 1) * -8px),
+        calc(var(--drawer-inverse-progress, 1) * -14px),
         0,
         0
       )
-      scale(calc(0.985 + var(--drawer-progress, 0) * 0.015));
+      scale(calc(0.965 + var(--drawer-progress, 0) * 0.035));
     opacity: calc(0.72 + var(--drawer-progress, 0) * 0.28);
     filter: blur(calc(var(--drawer-inverse-progress, 1) * 1.4px));
     transition:
@@ -177,11 +177,13 @@
     height: var(--full-height);
     background: var(--surface-primary);
     transform: translate3d(var(--drawer-offset, 0), 0, 0);
+    filter: blur(calc(var(--drawer-progress, 0) * 0.4px));
     transition:
       transform 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
+      filter 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
       border-radius 260ms var(--ease-out),
       box-shadow 260ms var(--ease-out);
-    will-change: transform;
+    will-change: transform, filter;
     overflow: hidden;
     touch-action: pan-y pinch-zoom;
     overscroll-behavior-x: none;
@@ -193,8 +195,8 @@
       z-index: 1000;
       pointer-events: none;
       border-radius: inherit;
-      background: var(--surface-primary);
-      opacity: calc(var(--drawer-progress, 0) * 0.22);
+      background: rgb(128, 128, 128);
+      opacity: calc(var(--drawer-progress, 0) * 0.14);
       transition: opacity 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
       will-change: opacity;
     }
@@ -228,6 +230,7 @@
   .drawer-settling .window-content {
     transition:
       transform 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
+      filter 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
       border-radius 260ms var(--ease-out),
       box-shadow 260ms var(--ease-out);
   }
@@ -276,13 +279,14 @@
       transition: none !important;
     }
 
-    .window-content::after {
-      opacity: calc(var(--drawer-progress, 0) * 0.12);
+    .window-content {
+      filter: none;
     }
   }
 
   @media (prefers-reduced-transparency: reduce) {
-    .sidebar {
+    .sidebar,
+    .window-content {
       filter: none;
     }
   }

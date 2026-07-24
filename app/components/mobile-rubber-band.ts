@@ -4,6 +4,14 @@ const INTENT_THRESHOLD = 8;
 const INTENT_RATIO = 1.15;
 const MAX_OFFSET = 72;
 
+function shouldUseNativeIOSOverscroll() {
+  const userAgent = navigator.userAgent;
+  const isIOSDevice = /iPad|iPhone|iPod/.test(userAgent);
+  const isIPadOS =
+    navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return isIOSDevice || isIPadOS;
+}
+
 function findTouch(touches: TouchList, identifier: number) {
   for (let index = 0; index < touches.length; index += 1) {
     const touch = touches.item(index);
@@ -50,6 +58,30 @@ export function useMobileRubberBandScroll<
     const reducedMotionQuery = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     );
+
+    if (shouldUseNativeIOSOverscroll()) {
+      const previousOverscrollBehavior =
+        scrollElement.style.overscrollBehaviorY;
+      const previousMomentumScrolling = scrollElement.style.getPropertyValue(
+        "-webkit-overflow-scrolling",
+      );
+
+      contentElement.style.transform = "";
+      scrollElement.style.overscrollBehaviorY = "auto";
+      scrollElement.style.setProperty("-webkit-overflow-scrolling", "touch");
+
+      return () => {
+        scrollElement.style.overscrollBehaviorY = previousOverscrollBehavior;
+        if (previousMomentumScrolling) {
+          scrollElement.style.setProperty(
+            "-webkit-overflow-scrolling",
+            previousMomentumScrolling,
+          );
+        } else {
+          scrollElement.style.removeProperty("-webkit-overflow-scrolling");
+        }
+      };
+    }
 
     let gesture = {
       identifier: -1,
@@ -109,14 +141,14 @@ export function useMobileRubberBandScroll<
         [
           { transform: `translate3d(0, ${offset}px, 0)` },
           {
-            transform: `translate3d(0, ${-offset * 0.055}px, 0)`,
-            offset: 0.72,
+            transform: `translate3d(0, ${-offset * 0.035}px, 0)`,
+            offset: 0.78,
           },
           { transform: "translate3d(0, 0, 0)" },
         ],
         {
-          duration: 360,
-          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          duration: 520,
+          easing: "cubic-bezier(0.16, 1, 0.3, 1)",
         },
       );
 

@@ -330,6 +330,7 @@ function Screen() {
   });
   const shouldTightBorder =
     getClientConfig()?.isApp || (config.tightBorder && !isMobileScreen);
+  const isDrawerVisible = isMobileScreen && drawerOffset > 0.5;
 
   useEffect(() => {
     latestDrawerState.current = {
@@ -411,6 +412,24 @@ function Screen() {
       window.removeEventListener("orientationchange", syncOpenDrawerOffset);
     };
   }, [isMobileScreen, isDrawerOpen, isDrawerDragging]);
+
+  useEffect(() => {
+    if (!isDrawerVisible) return;
+
+    const element = windowContentRef.current;
+    if (!element) return;
+
+    const preventForegroundScroll = (event: TouchEvent) => {
+      if (event.cancelable) event.preventDefault();
+    };
+
+    element.addEventListener("touchmove", preventForegroundScroll, {
+      passive: false,
+    });
+    return () => {
+      element.removeEventListener("touchmove", preventForegroundScroll);
+    };
+  }, [isDrawerVisible]);
 
   useEffect(() => {
     if (!isMobileScreen) return;
