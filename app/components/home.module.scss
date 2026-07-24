@@ -149,13 +149,13 @@
     padding-bottom: calc(14px + env(safe-area-inset-bottom));
     transform-origin: left center;
     transform: translate3d(
-        calc(var(--drawer-inverse-progress, 1) * -14px),
+        calc(var(--drawer-inverse-progress, 1) * -8px),
         0,
         0
       )
-      scale(calc(0.965 + var(--drawer-progress, 0) * 0.035));
-    opacity: calc(0.46 + var(--drawer-progress, 0) * 0.54);
-    filter: blur(calc(var(--drawer-inverse-progress, 1) * 5px));
+      scale(calc(0.985 + var(--drawer-progress, 0) * 0.015));
+    opacity: calc(0.72 + var(--drawer-progress, 0) * 0.28);
+    filter: blur(calc(var(--drawer-inverse-progress, 1) * 1.4px));
     transition:
       transform 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
       opacity 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
@@ -193,28 +193,17 @@
       z-index: 1000;
       pointer-events: none;
       border-radius: inherit;
-      background: rgba(
-        0,
-        0,
-        0,
-        calc(var(--drawer-progress, 0) * 0.14)
-      );
-      backdrop-filter: blur(calc(var(--drawer-progress, 0) * 1.4px));
-      -webkit-backdrop-filter: blur(
-        calc(var(--drawer-progress, 0) * 1.4px)
-      );
-      transition:
-        background-color 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
-        backdrop-filter 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
-        -webkit-backdrop-filter 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
-      will-change: background-color, backdrop-filter;
+      background: var(--surface-primary);
+      opacity: calc(var(--drawer-progress, 0) * 0.22);
+      transition: opacity 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
+      will-change: opacity;
     }
   }
 
   .drawer-open {
     border-top-left-radius: 28px;
     border-bottom-left-radius: 28px;
-    box-shadow: -16px 0 34px rgba(0, 0, 0, 0.16);
+    box-shadow: -10px 0 24px rgba(0, 0, 0, 0.08);
     touch-action: none;
 
     [data-chat-scroll-body] {
@@ -244,10 +233,7 @@
   }
 
   .drawer-settling .window-content::after {
-    transition:
-      background-color 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
-      backdrop-filter 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
-      -webkit-backdrop-filter 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
+    transition: opacity 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
   }
 
   .sidebar-drag {
@@ -291,19 +277,13 @@
     }
 
     .window-content::after {
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
+      opacity: calc(var(--drawer-progress, 0) * 0.12);
     }
   }
 
   @media (prefers-reduced-transparency: reduce) {
     .sidebar {
       filter: none;
-    }
-
-    .window-content::after {
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
     }
   }
 }
