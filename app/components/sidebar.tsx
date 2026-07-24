@@ -3,8 +3,8 @@ import React, { Fragment, useEffect, useRef, useState } from "react";
 import styles from "./home.module.scss";
 
 import { IconButton } from "./button";
-import SettingsIcon from "../icons/settings.svg";
-import AddIcon from "../icons/add.svg";
+import GearIcon from "../icons/gear.svg";
+import ComposeIcon from "../icons/compose.svg";
 import McpIcon from "../icons/mcp.svg";
 import DragIcon from "../icons/drag.svg";
 
@@ -292,8 +292,9 @@ export function SideBar(props: {
       <SideBarTail
         primaryAction={
           <IconButton
-            icon={<AddIcon />}
-            text={shouldNarrow ? undefined : Locale.Home.NewChat}
+            icon={<ComposeIcon />}
+            text={shouldNarrow ? undefined : "聊天"}
+            className={styles["sidebar-primary-action"]}
             onClick={() => {
               chatStore.newSession();
               navigate(Path.Chat);
@@ -306,7 +307,8 @@ export function SideBar(props: {
             <Link to={Path.Settings}>
               <IconButton
                 aria={Locale.Settings.Title}
-                icon={<SettingsIcon />}
+                icon={<GearIcon />}
+                className={styles["sidebar-settings-action"]}
                 shadow
               />
             </Link>

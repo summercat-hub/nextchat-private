@@ -92,7 +92,7 @@ async function ensurePlaywrightCli() {
   });
 }
 
-async function screenshotWithChannel(channel, name, viewport) {
+async function screenshotWithChannel(channel, name, viewport, url = baseUrl) {
   const filePath = path.join(outputDir, name);
 
   await run(process.execPath, [
@@ -102,7 +102,7 @@ async function screenshotWithChannel(channel, name, viewport) {
     `--channel=${channel}`,
     `--viewport-size=${viewport}`,
     "--wait-for-timeout=2000",
-    baseUrl,
+    url,
     filePath,
   ]);
 
@@ -114,12 +114,12 @@ async function screenshotWithChannel(channel, name, viewport) {
   return filePath;
 }
 
-async function capture(name, viewport) {
+async function capture(name, viewport, url = baseUrl) {
   const errors = [];
 
   for (const channel of ["msedge", "chrome"]) {
     try {
-      const filePath = await screenshotWithChannel(channel, name, viewport);
+      const filePath = await screenshotWithChannel(channel, name, viewport, url);
       console.log(`[qa-ui] ${name} captured with ${channel}: ${filePath}`);
       return;
     } catch (error) {
@@ -140,11 +140,7 @@ async function main() {
   const stopServer = () => {
     if (stopping || server.exitCode !== null) return;
     stopping = true;
-    if (isWindows) {
-      spawn("taskkill", ["/pid", String(server.pid), "/t", "/f"], { stdio: "ignore" });
-    } else {
-      server.kill("SIGTERM");
-    }
+    server.kill("SIGTERM");
   };
 
   process.on("SIGINT", () => {
@@ -160,6 +156,7 @@ async function main() {
     await waitForServer();
     await capture("mobile-390x844.png", "390,844");
     await capture("desktop-1280x900.png", "1280,900");
+    await capture("settings-mobile-390x844.png", "390,844", `${baseUrl}/#/settings`);
     console.log(`[qa-ui] Screenshots saved in ${outputDir}`);
   } finally {
     stopServer();

@@ -1,4 +1,4 @@
-import DeleteIcon from "../icons/delete.svg";
+import XIcon from "../icons/x.svg";
 
 import styles from "./home.module.scss";
 import {
@@ -104,7 +104,7 @@ export function ChatItem(props: {
               e.stopPropagation();
             }}
           >
-            <DeleteIcon />
+            <XIcon />
           </button>
         </div>
       )}
