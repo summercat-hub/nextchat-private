@@ -691,9 +691,6 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
           onClick={() => setOpen((value) => !value)}
         >
           <span>{currentLabel}</span>
-          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-            <path d="m4.75 6.25 3.25 3.25 3.25-3.25" />
-          </svg>
         </button>
 
         {open && (

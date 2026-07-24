@@ -218,6 +218,10 @@
   pointer-events: none;
 }
 
+.chat-input-actions-open ~ .chat-input-panel-inner .chat-input {
+  caret-color: transparent;
+}
+
 .chat-input-menu {
   --chat-menu-origin-x: 30px;
   --chat-menu-origin-y: calc(100% - 24px);
@@ -229,27 +233,27 @@
   box-sizing: border-box;
   padding: 8px;
   border: 1px solid color-mix(in srgb, var(--chat-menu-color) 8%, transparent);
-  border-radius: 999px;
+  border-radius: 24px;
   background: var(--chat-menu-bg);
   color: var(--chat-menu-color);
   box-shadow: var(--chat-menu-shadow);
   backdrop-filter: blur(24px) saturate(155%);
   -webkit-backdrop-filter: blur(24px) saturate(155%);
   transform-origin: var(--chat-menu-origin-x) var(--chat-menu-origin-y);
-  opacity: 0.08;
-  transform: translate3d(0, 0, 0) scale(0.22);
+  opacity: 0;
+  transform: translate3d(0, 7px, 0) scale(0.94);
   clip-path: circle(
-    18px at var(--chat-menu-origin-x) var(--chat-menu-origin-y)
+    320px at var(--chat-menu-origin-x) var(--chat-menu-origin-y)
   );
-  filter: blur(5px);
+  filter: blur(2px);
   pointer-events: none;
   will-change: transform, opacity, clip-path, filter;
   transition:
-    transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    clip-path 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    opacity 180ms ease-out,
-    filter 220ms ease-out,
-    border-radius 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform var(--motion-normal) var(--ease-out),
+    clip-path var(--motion-normal) var(--ease-out),
+    opacity var(--motion-normal) var(--ease-out),
+    filter var(--motion-normal) var(--ease-out),
+    border-radius var(--motion-normal) var(--ease-out);
 }
 
 .chat-input-actions-focused .chat-input-menu {
@@ -269,6 +273,14 @@
 }
 
 .chat-input-menu-closing {
+  opacity: 0.08;
+  transform: translate3d(0, 0, 0) scale(0.22);
+  clip-path: circle(
+    18px at var(--chat-menu-origin-x) var(--chat-menu-origin-y)
+  );
+  border-radius: 999px;
+  filter: blur(5px);
+  pointer-events: none;
   transition-duration: 240ms, 240ms, 150ms, 180ms, 240ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1069,17 +1081,16 @@
 }
 
 .chat-intelligence-trigger {
-  min-width: 66px;
+  min-width: 0;
   height: 36px;
   border: 0;
-  border-radius: 999px;
-  padding: 0 11px 0 14px;
+  border-radius: 0;
+  padding: 0 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
-  color: color-mix(in srgb, var(--text-primary) 66%, transparent);
+  background: transparent;
+  color: color-mix(in srgb, var(--text-primary) 58%, transparent);
   font: inherit;
   font-size: 15px;
   line-height: 1;
@@ -1088,21 +1099,8 @@
   touch-action: manipulation;
   transition:
     transform var(--motion-press) ease-out,
-    background-color var(--motion-fast) var(--ease-out),
     color var(--motion-fast) var(--ease-out),
     opacity var(--motion-fast) var(--ease-out);
-
-  svg {
-    width: 15px;
-    height: 15px;
-    display: block;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    transition: transform var(--motion-fast) var(--ease-out);
-  }
 
   &:active:not(:disabled) {
     transform: scale(0.94);
@@ -1115,12 +1113,8 @@
 }
 
 .chat-intelligence-selector-open .chat-intelligence-trigger {
-  background: color-mix(in srgb, var(--text-primary) 13%, transparent);
-  color: color-mix(in srgb, var(--text-primary) 82%, transparent);
-
-  svg {
-    transform: rotate(180deg);
-  }
+  background: transparent;
+  color: color-mix(in srgb, var(--text-primary) 76%, transparent);
 }
 
 .chat-intelligence-menu {
@@ -1583,10 +1577,10 @@
   }
 
   .chat-intelligence-trigger {
-    min-width: 62px;
+    min-width: 0;
     height: 34px;
-    padding-right: 10px;
-    padding-left: 13px;
+    padding-right: 8px;
+    padding-left: 8px;
     font-size: 15px;
   }
 
