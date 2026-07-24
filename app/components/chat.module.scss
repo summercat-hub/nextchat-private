@@ -1156,38 +1156,85 @@
 
 @media only screen and (max-width: 640px) {
   .chat-input-panel {
-    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    padding: 6px 20px calc(6px + env(safe-area-inset-bottom));
+    background: var(--surface-primary);
+    border-top: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .chat-input-panel-inner {
+    min-height: 48px;
+    background: var(--surface-elevated);
+    background: color-mix(
+      in srgb,
+      var(--surface-primary) 95%,
+      var(--text-primary) 5%
+    );
+    box-shadow: none;
+  }
+
+  .chat-input-panel-inner:has(.chat-input:focus),
+  .chat-input-panel-inner-expanded {
+    box-shadow: none;
   }
 
   .chat-input-actions {
-    left: 18px;
-    bottom: calc(13px + env(safe-area-inset-bottom));
+    left: 26px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    width: 36px;
+    height: 36px;
+  }
+
+  .chat-input-plus {
+    width: 36px;
+    height: 36px;
+  }
+
+  .chat-input-plus-icon,
+  .chat-input-plus-icon::before,
+  .chat-input-plus-icon::after {
+    width: 19px;
   }
 
   .chat-input {
-    min-height: 50px;
-    padding: 13px 58px 13px 62px;
+    min-height: 48px;
+    padding: 12px 52px 12px 54px;
     font-size: 16px !important;
   }
 
   .chat-input-panel-inner-expanded {
-    min-height: 98px;
-    border-radius: 28px;
+    min-height: 92px;
+    border-radius: 24px;
   }
 
   .chat-input-panel-inner-expanded .chat-input {
-    min-height: 46px;
+    min-height: 44px;
     max-height: min(36vh, 210px);
-    padding: 12px 16px 8px 18px;
+    padding: 11px 15px 7px 16px;
+  }
+
+  .chat-input-panel-inner-expanded .chat-input-toolbar {
+    min-height: 48px;
+    flex-basis: 48px;
   }
 
   .chat-input-panel-inner-expanded.chat-input-panel-inner-attach {
-    min-height: 224px;
+    min-height: 228px;
   }
 
   .chat-input-send {
-    right: 7px;
-    bottom: 7px;
+    right: 6px;
+    bottom: 6px;
+    width: 34px;
+    height: 34px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .chat-input-send-icon {
+    width: 19px;
+    height: 19px;
   }
 }
 
