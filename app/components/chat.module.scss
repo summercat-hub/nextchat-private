@@ -545,6 +545,22 @@
   }
 }
 
+.chat-header-icon-button {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+
+  &:hover,
+  &:focus-visible,
+  &:active {
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+}
+
 .chat-header-popover-content {
   width: min(240px, calc(100vw - 28px)) !important;
   padding: 6px;

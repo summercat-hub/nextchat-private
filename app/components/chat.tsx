@@ -1543,6 +1543,7 @@ function _Chat() {
               <div className={"window-action-button"}>
                 <IconButton
                   icon={<ReturnIcon />}
+                  className={styles["chat-header-icon-button"]}
                   title={Locale.Chat.Actions.ChatList}
                   aria={Locale.Chat.Actions.ChatList}
                   onClick={() =>
@@ -1631,6 +1632,7 @@ function _Chat() {
               >
                 <IconButton
                   icon={<MenuIcon />}
+                  className={styles["chat-header-icon-button"]}
                   title="更多操作"
                   aria="更多操作"
                   ariaExpanded={showHeaderMenu}

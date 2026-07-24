@@ -161,6 +161,7 @@ const DRAWER_INTENT_RATIO = 1.25;
 const DRAWER_VELOCITY_THRESHOLD = 500;
 const DRAWER_MIN_COMMIT_DISTANCE = 52;
 const DRAWER_COMMIT_DISTANCE_RATIO = 0.38;
+const DRAWER_SETTLE_DURATION = 340;
 
 function isSelectionActive() {
   const selection = window.getSelection?.();
@@ -377,7 +378,7 @@ function Screen() {
     }
     drawerTimer.current = window.setTimeout(() => {
       setIsDrawerSettling(false);
-    }, 280);
+    }, DRAWER_SETTLE_DURATION);
   };
 
   useEffect(() => {
@@ -670,6 +671,13 @@ function Screen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobileScreen, location.pathname]);
 
+  const drawerDistance =
+    isMobileScreen && typeof window !== "undefined" ? getDrawerDistance() : 1;
+  const drawerProgress = isMobileScreen
+    ? clampDrawerOffset(drawerOffset, drawerDistance) / drawerDistance
+    : 0;
+  const drawerInverseProgress = 1 - drawerProgress;
+
   const closeDrawer = () => {
     if (!isDrawerOpen) return;
     settleDrawer(false);
@@ -718,13 +726,6 @@ function Screen() {
           className={clsx({
             [styles["drawer-open"]]: isMobileScreen && drawerOffset > 0,
           })}
-          style={
-            isMobileScreen
-              ? ({
-                  "--drawer-offset": `${drawerOffset}px`,
-                } as CSSProperties)
-              : undefined
-          }
           onClickCapture={handleDrawerClickCapture}
         >
           <Routes>
@@ -751,6 +752,15 @@ function Screen() {
         [styles["drawer-dragging"]]: isDrawerDragging,
         [styles["drawer-settling"]]: isDrawerSettling,
       })}
+      style={
+        isMobileScreen
+          ? ({
+              "--drawer-offset": `${drawerOffset}px`,
+              "--drawer-progress": drawerProgress.toFixed(4),
+              "--drawer-inverse-progress": drawerInverseProgress.toFixed(4),
+            } as CSSProperties)
+          : undefined
+      }
       onClickCapture={handleContainerClickCapture}
     >
       {renderContent()}
