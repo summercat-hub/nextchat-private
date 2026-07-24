@@ -97,6 +97,10 @@ declare global {
 
       ENABLE_MCP?: string; // enable mcp functionality
 
+      // Cloudflare Workers AI speech-to-text
+      CLOUDFLARE_API_TOKEN?: string;
+      CLOUDFLARE_ACCOUNT_ID?: string;
+
       // Tavily search integration
       TAVILY_API_KEY?: string;
       WEB_SEARCH_ROUTER_MODEL?: string;
@@ -254,6 +258,7 @@ export const getServerSideConfig = () => {
     chatglmApiKey: getApiKey(process.env.CHATGLM_API_KEY),
 
     cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+    cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN,
     cloudflareKVNamespaceId: process.env.CLOUDFLARE_KV_NAMESPACE_ID,
     cloudflareKVApiKey: getApiKey(process.env.CLOUDFLARE_KV_API_KEY),
     cloudflareKVTTL: process.env.CLOUDFLARE_KV_TTL,

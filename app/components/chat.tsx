@@ -77,6 +77,7 @@ import {
 } from "./ui-lib";
 import { useNavigate } from "react-router-dom";
 import {
+  ACCESS_CODE_PREFIX,
   CHAT_PAGE_SIZE,
   DEFAULT_TTS_ENGINE,
   ModelProvider,
@@ -187,6 +188,122 @@ function MenuSettingsIcon() {
       <circle cx="12" cy="12" r="2.65" />
     </svg>
   );
+}
+
+type VoiceInputState = "idle" | "starting" | "recording" | "transcribing";
+type VoiceStopAction = "insert" | "send" | "cancel";
+
+const MAX_VOICE_RECORDING_MS = 60_000;
+const MAX_VOICE_AUDIO_BYTES = 4 * 1024 * 1024;
+
+function MicrophoneIcon() {
+  return (
+    <svg
+      className={styles["chat-input-microphone-icon"]}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="8.25" y="3.25" width="7.5" height="12" rx="3.75" />
+      <path d="M5.75 11.5a6.25 6.25 0 0 0 12.5 0" />
+      <path d="M12 17.75v3" />
+      <path d="M8.75 20.75h6.5" />
+    </svg>
+  );
+}
+
+function VoiceWaveform(props: {
+  analyser: AnalyserNode | null;
+  active: boolean;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    let animationFrame = 0;
+    let frequencyData = props.analyser
+      ? new Uint8Array(props.analyser.frequencyBinCount)
+      : new Uint8Array(64);
+    const waveformColor = getComputedStyle(canvas).color;
+
+    const draw = () => {
+      const rect = canvas.getBoundingClientRect();
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.max(1, Math.floor(rect.width * pixelRatio));
+      const height = Math.max(1, Math.floor(rect.height * pixelRatio));
+
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+
+      context.clearRect(0, 0, width, height);
+      context.strokeStyle = waveformColor;
+      context.lineCap = "round";
+      context.lineWidth = 2.2 * pixelRatio;
+
+      if (
+        props.active &&
+        props.analyser &&
+        frequencyData.length !== props.analyser.frequencyBinCount
+      ) {
+        frequencyData = new Uint8Array(props.analyser.frequencyBinCount);
+      }
+      if (props.active && props.analyser) {
+        props.analyser.getByteFrequencyData(frequencyData);
+      }
+
+      const barGap = 6.2 * pixelRatio;
+      const barCount = Math.max(18, Math.floor(width / barGap));
+      const centerY = height / 2;
+      const maxBarHeight = Math.max(6 * pixelRatio, height * 0.72);
+
+      for (let index = 0; index < barCount; index += 1) {
+        const dataIndex = Math.min(
+          frequencyData.length - 1,
+          Math.floor((index / Math.max(1, barCount - 1)) * 52),
+        );
+        const signal = props.active ? frequencyData[dataIndex] / 255 : 0.08;
+        const shapedSignal = Math.pow(Math.max(0.04, signal), 0.72);
+        const barHeight = Math.max(
+          2.5 * pixelRatio,
+          shapedSignal * maxBarHeight,
+        );
+        const x = (index + 0.5) * (width / barCount);
+
+        context.beginPath();
+        context.moveTo(x, centerY - barHeight / 2);
+        context.lineTo(x, centerY + barHeight / 2);
+        context.stroke();
+      }
+
+      animationFrame = window.requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [props.active, props.analyser]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className={styles["chat-input-waveform"]}
+      aria-hidden="true"
+    />
+  );
+}
+
+function appendTranscript(draft: string, transcript: string) {
+  const trimmedDraft = draft.trimEnd();
+  const trimmedTranscript = transcript.trim();
+  if (!trimmedDraft) return trimmedTranscript;
+  if (!trimmedTranscript) return trimmedDraft;
+  return `${trimmedDraft}\n${trimmedTranscript}`;
 }
 
 const RealtimeChat = dynamic(
@@ -497,6 +614,8 @@ export function ChatActions(props: {
   showPromptModal: () => void;
   uploading: boolean;
   inputFocused: boolean;
+  voiceActive: boolean;
+  onCancelVoice: () => void;
 }) {
   const {
     inputFocused,
@@ -505,6 +624,8 @@ export function ChatActions(props: {
     showPromptModal,
     uploadImage,
     uploading,
+    voiceActive,
+    onCancelVoice,
   } = props;
   const config = useAppConfig();
   const chatStore = useChatStore();
@@ -527,6 +648,10 @@ export function ChatActions(props: {
   }, [allModels]);
   const [showUploadImage, setShowUploadImage] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (voiceActive) setMenuOpen(false);
+  }, [voiceActive]);
 
   function nextTheme() {
     const themes = [Theme.Auto, Theme.Light, Theme.Dark];
@@ -570,18 +695,31 @@ export function ChatActions(props: {
         styles["chat-input-actions"],
         menuOpen && styles["chat-input-actions-open"],
         inputFocused && styles["chat-input-actions-focused"],
+        voiceActive && styles["chat-input-actions-recording"],
       )}
     >
       <button
         type="button"
         className={styles["chat-input-plus"]}
         data-testid="chat-input-plus"
-        aria-label={Locale.UI.Config}
-        aria-expanded={menuOpen}
+        aria-label={voiceActive ? "取消录音" : Locale.UI.Config}
+        aria-expanded={voiceActive ? false : menuOpen}
         onPointerDown={(event) => event.preventDefault()}
-        onClick={() => setMenuOpen((open) => !open)}
+        onClick={() => {
+          if (voiceActive) {
+            onCancelVoice();
+          } else {
+            setMenuOpen((open) => !open);
+          }
+        }}
       >
-        <span className={styles["chat-input-plus-icon"]} aria-hidden="true" />
+        <span
+          className={clsx(
+            styles["chat-input-plus-icon"],
+            voiceActive && styles["chat-input-cancel-icon"],
+          )}
+          aria-hidden="true"
+        />
       </button>
 
       {menuOpen && (
@@ -794,8 +932,20 @@ function _Chat() {
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [userInput, setUserInput] = useState("");
+  const userInputRef = useRef("");
   const [inputFocused, setInputFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [voiceState, setVoiceState] = useState<VoiceInputState>("idle");
+  const [voiceAnalyser, setVoiceAnalyser] = useState<AnalyserNode | null>(null);
+  const voiceMediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceStreamRef = useRef<MediaStream | null>(null);
+  const voiceAudioContextRef = useRef<AudioContext | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
+  const voiceStopActionRef = useRef<VoiceStopAction>("insert");
+  const voiceStartedAtRef = useRef(0);
+  const voiceTimeoutRef = useRef<number | null>(null);
+  const voiceAbortControllerRef = useRef<AbortController | null>(null);
+  const voiceSessionRef = useRef(0);
   const { submitKey, shouldSubmit } = useSubmitHandler();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollContentRef = useRef<HTMLDivElement>(null);
@@ -840,9 +990,15 @@ function _Chat() {
     attachImages.length > 0,
   );
   const [uploading, setUploading] = useState(false);
+  const isVoiceStarting = voiceState === "starting";
+  const isVoiceRecording = voiceState === "recording";
+  const isVoiceTranscribing = voiceState === "transcribing";
+  const isVoiceActive = voiceState !== "idle";
   const canSubmit = userInput.trim().length > 0 || attachImages.length > 0;
+  const canUseSendButton = canSubmit || isVoiceRecording;
   const inputExpanded =
-    inputFocused || userInput.length > 0 || attachImages.length > 0;
+    !isVoiceActive &&
+    (inputFocused || userInput.length > 0 || attachImages.length > 0);
 
   useEffect(() => {
     const previousCount = previousAttachmentCountRef.current;
@@ -893,6 +1049,10 @@ function _Chat() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(measure, [userInput]);
+
+  useEffect(() => {
+    userInputRef.current = userInput;
+  }, [userInput]);
 
   // chat commands shortcuts
   const chatCommands = useChatCommand({
@@ -945,10 +1105,282 @@ function _Chat() {
     setAttachImages([]);
     chatStore.setLastInput(userInput);
     setUserInput("");
+    userInputRef.current = "";
     setPromptHints([]);
     if (!isMobileScreen) inputRef.current?.focus();
     setAutoScroll(true);
   };
+
+  const releaseVoiceMedia = (updateUi = true) => {
+    if (voiceTimeoutRef.current !== null) {
+      window.clearTimeout(voiceTimeoutRef.current);
+      voiceTimeoutRef.current = null;
+    }
+
+    voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
+    voiceStreamRef.current = null;
+    voiceMediaRecorderRef.current = null;
+    if (updateUi) setVoiceAnalyser(null);
+
+    const audioContext = voiceAudioContextRef.current;
+    voiceAudioContextRef.current = null;
+    if (audioContext && audioContext.state !== "closed") {
+      void audioContext.close().catch(() => undefined);
+    }
+  };
+
+  const transcribeVoice = async (
+    audioBlob: Blob,
+    action: Exclude<VoiceStopAction, "cancel">,
+    durationMs: number,
+    voiceSession: number,
+  ) => {
+    const controller = new AbortController();
+    voiceAbortControllerRef.current = controller;
+    setVoiceState("transcribing");
+
+    try {
+      const accessStore = useAccessStore.getState();
+      const headers: Record<string, string> = {
+        "Content-Type": audioBlob.type || "audio/webm",
+        "X-Audio-Duration-Ms": String(durationMs),
+      };
+
+      if (accessStore.enabledAccessControl() && accessStore.accessCode) {
+        headers.Authorization = `Bearer ${ACCESS_CODE_PREFIX}${accessStore.accessCode}`;
+      }
+
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        headers,
+        body: audioBlob,
+        signal: controller.signal,
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        text?: string;
+        message?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.message || "语音转文字失败");
+      }
+
+      const transcript = payload.text?.trim() ?? "";
+      if (!transcript) {
+        throw new Error("没有识别到清晰的语音内容");
+      }
+      if (voiceSessionRef.current !== voiceSession) return;
+
+      const finalInput = appendTranscript(userInputRef.current, transcript);
+      if (action === "send") {
+        doSubmit(finalInput);
+      } else {
+        userInputRef.current = finalInput;
+        setUserInput(finalInput);
+        window.requestAnimationFrame(() => inputRef.current?.focus());
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      showToast(
+        error instanceof Error ? error.message : "语音转文字失败，请稍后重试",
+      );
+    } finally {
+      if (voiceAbortControllerRef.current === controller) {
+        voiceAbortControllerRef.current = null;
+      }
+      if (voiceSessionRef.current === voiceSession) {
+        setVoiceState("idle");
+      }
+    }
+  };
+
+  const stopVoiceRecording = (action: Exclude<VoiceStopAction, "cancel">) => {
+    const recorder = voiceMediaRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") return;
+
+    voiceStopActionRef.current = action;
+    if (voiceTimeoutRef.current !== null) {
+      window.clearTimeout(voiceTimeoutRef.current);
+      voiceTimeoutRef.current = null;
+    }
+    setVoiceState("transcribing");
+    recorder.stop();
+  };
+
+  const cancelVoiceInput = () => {
+    voiceSessionRef.current += 1;
+    voiceAbortControllerRef.current?.abort();
+    voiceAbortControllerRef.current = null;
+    voiceStopActionRef.current = "cancel";
+
+    const recorder = voiceMediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    } else {
+      releaseVoiceMedia();
+    }
+
+    voiceChunksRef.current = [];
+    setVoiceState("idle");
+  };
+
+  const startVoiceRecording = async () => {
+    if (voiceState !== "idle") return;
+
+    const voiceSession = voiceSessionRef.current + 1;
+    voiceSessionRef.current = voiceSession;
+    voiceStopActionRef.current = "insert";
+    voiceChunksRef.current = [];
+    setPromptHints([]);
+    setInputFocused(false);
+    inputRef.current?.blur();
+    setVoiceState("starting");
+
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+        throw new Error("当前浏览器不支持麦克风录音");
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      if (voiceSessionRef.current !== voiceSession) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      voiceStreamRef.current = stream;
+
+      const AudioContextConstructor =
+        window.AudioContext ||
+        (
+          window as typeof window & {
+            webkitAudioContext?: typeof AudioContext;
+          }
+        ).webkitAudioContext;
+
+      if (AudioContextConstructor) {
+        try {
+          const audioContext = new AudioContextConstructor();
+          const source = audioContext.createMediaStreamSource(stream);
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.78;
+          source.connect(analyser);
+          voiceAudioContextRef.current = audioContext;
+          setVoiceAnalyser(analyser);
+          await audioContext.resume();
+        } catch (error) {
+          console.warn("[Voice Input] waveform analyser unavailable", error);
+          const audioContext = voiceAudioContextRef.current;
+          voiceAudioContextRef.current = null;
+          if (audioContext && audioContext.state !== "closed") {
+            void audioContext.close().catch(() => undefined);
+          }
+          setVoiceAnalyser(null);
+        }
+      }
+
+      const preferredMimeTypes = [
+        "audio/webm;codecs=opus",
+        "audio/mp4",
+        "audio/webm",
+      ];
+      const mimeType = preferredMimeTypes.find((type) =>
+        MediaRecorder.isTypeSupported(type),
+      );
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
+      voiceMediaRecorderRef.current = recorder;
+      voiceStartedAtRef.current = Date.now();
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) voiceChunksRef.current.push(event.data);
+      };
+
+      recorder.onerror = () => {
+        showToast("录音失败，请检查麦克风权限后重试");
+        cancelVoiceInput();
+      };
+
+      recorder.onstop = () => {
+        const action = voiceStopActionRef.current;
+        const durationMs = Math.max(0, Date.now() - voiceStartedAtRef.current);
+        const chunks = voiceChunksRef.current;
+        voiceChunksRef.current = [];
+        const blobType = recorder.mimeType || mimeType || "audio/webm";
+        releaseVoiceMedia();
+
+        if (action === "cancel" || voiceSessionRef.current !== voiceSession) {
+          return;
+        }
+
+        const audioBlob = new Blob(chunks, { type: blobType });
+        if (audioBlob.size === 0) {
+          setVoiceState("idle");
+          showToast("没有检测到有效录音");
+          return;
+        }
+        if (audioBlob.size > MAX_VOICE_AUDIO_BYTES) {
+          setVoiceState("idle");
+          showToast("录音文件过大，请缩短后重试");
+          return;
+        }
+
+        void transcribeVoice(audioBlob, action, durationMs, voiceSession);
+      };
+
+      recorder.start(250);
+      setVoiceState("recording");
+      voiceTimeoutRef.current = window.setTimeout(() => {
+        if (
+          voiceSessionRef.current === voiceSession &&
+          recorder.state === "recording"
+        ) {
+          voiceStopActionRef.current = "insert";
+          setVoiceState("transcribing");
+          recorder.stop();
+          showToast("已达到 60 秒录音上限");
+        }
+      }, MAX_VOICE_RECORDING_MS);
+    } catch (error) {
+      if (voiceSessionRef.current !== voiceSession) return;
+      releaseVoiceMedia();
+      setVoiceState("idle");
+      const message =
+        error instanceof DOMException && error.name === "NotAllowedError"
+          ? "未获得麦克风权限，请在浏览器设置中允许访问"
+          : error instanceof Error
+          ? error.message
+          : "无法启动麦克风";
+      showToast(message);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      voiceSessionRef.current += 1;
+      voiceAbortControllerRef.current?.abort();
+      const recorder = voiceMediaRecorderRef.current;
+      if (recorder && recorder.state !== "inactive") {
+        voiceStopActionRef.current = "cancel";
+        recorder.ondataavailable = null;
+        recorder.onerror = null;
+        recorder.onstop = null;
+        recorder.stop();
+      }
+      releaseVoiceMedia(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onPromptSelect = (prompt: RenderPrompt) => {
     setTimeout(() => {
@@ -1879,16 +2311,19 @@ function _Chat() {
                 showPromptModal={() => setShowPromptModal(true)}
                 uploading={uploading}
                 inputFocused={inputFocused}
+                voiceActive={isVoiceActive}
+                onCancelVoice={cancelVoiceInput}
               />
               <label
                 className={clsx(styles["chat-input-panel-inner"], {
                   [styles["chat-input-panel-inner-expanded"]]: inputExpanded,
                   [styles["chat-input-panel-inner-attach"]]:
-                    attachImages.length !== 0,
+                    attachImages.length !== 0 && !isVoiceActive,
+                  [styles["chat-input-panel-inner-recording"]]: isVoiceActive,
                 })}
                 htmlFor="chat-input"
               >
-                {attachImages.length !== 0 && (
+                {attachImages.length !== 0 && !isVoiceActive && (
                   <div
                     ref={attachmentScrollRef}
                     className={styles["attach-images"]}
@@ -1919,43 +2354,106 @@ function _Chat() {
                     </div>
                   </div>
                 )}
-                <textarea
-                  id="chat-input"
-                  ref={inputRef}
-                  className={styles["chat-input"]}
-                  placeholder={Locale.Chat.Input(submitKey)}
-                  onInput={(e) => onInput(e.currentTarget.value)}
-                  value={userInput}
-                  onKeyDown={onInputKeyDown}
-                  onFocus={() => {
-                    setInputFocused(true);
-                    scrollToBottom();
-                  }}
-                  onBlur={() => setInputFocused(false)}
-                  onClick={scrollToBottom}
-                  onPaste={handlePaste}
-                  rows={inputRows}
-                  autoFocus={autoFocus}
-                  style={{
-                    fontSize: config.fontSize,
-                    fontFamily: config.fontFamily,
-                  }}
-                />
-                <div
-                  className={styles["chat-input-toolbar"]}
-                  aria-hidden="true"
-                />
+                {!isVoiceActive ? (
+                  <textarea
+                    id="chat-input"
+                    ref={inputRef}
+                    className={styles["chat-input"]}
+                    placeholder={Locale.Chat.Input(submitKey)}
+                    onInput={(e) => onInput(e.currentTarget.value)}
+                    value={userInput}
+                    onKeyDown={onInputKeyDown}
+                    onFocus={() => {
+                      setInputFocused(true);
+                      scrollToBottom();
+                    }}
+                    onBlur={() => setInputFocused(false)}
+                    onClick={scrollToBottom}
+                    onPaste={handlePaste}
+                    rows={inputRows}
+                    autoFocus={autoFocus}
+                    style={{
+                      fontSize: config.fontSize,
+                      fontFamily: config.fontFamily,
+                    }}
+                  />
+                ) : (
+                  <div
+                    className={styles["chat-input-voice-status"]}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {isVoiceRecording ? (
+                      <VoiceWaveform analyser={voiceAnalyser} active />
+                    ) : (
+                      <span className={styles["chat-input-voice-status-text"]}>
+                        {isVoiceStarting ? "正在启动麦克风…" : "正在转写…"}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {!isVoiceActive && (
+                  <div
+                    className={styles["chat-input-toolbar"]}
+                    aria-hidden="true"
+                  />
+                )}
                 <button
                   type="button"
-                  aria-label={Locale.Chat.Send}
-                  title={Locale.Chat.Send}
+                  className={clsx(
+                    styles["chat-input-voice"],
+                    isVoiceRecording && styles["chat-input-voice-recording"],
+                    (isVoiceStarting || isVoiceTranscribing) &&
+                      styles["chat-input-voice-busy"],
+                  )}
+                  aria-label={
+                    isVoiceRecording ? "停止录音并转成文字" : "开始语音输入"
+                  }
+                  title={isVoiceRecording ? "停止录音并转成文字" : "语音输入"}
+                  disabled={isVoiceStarting || isVoiceTranscribing}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    if (isVoiceRecording) {
+                      stopVoiceRecording("insert");
+                    } else if (!isVoiceActive) {
+                      void startVoiceRecording();
+                    }
+                  }}
+                >
+                  {isVoiceRecording ? (
+                    <span
+                      className={styles["chat-input-voice-stop-square"]}
+                      aria-hidden="true"
+                    />
+                  ) : isVoiceStarting || isVoiceTranscribing ? (
+                    <span
+                      className={styles["chat-input-voice-spinner"]}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <MicrophoneIcon />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  aria-label={
+                    isVoiceRecording ? "结束录音并发送" : Locale.Chat.Send
+                  }
+                  title={isVoiceRecording ? "结束录音并发送" : Locale.Chat.Send}
                   data-testid="chat-input-send"
-                  disabled={!canSubmit}
+                  disabled={!canUseSendButton}
                   className={clsx(
                     styles["chat-input-send"],
-                    canSubmit && styles["chat-input-send-active"],
+                    canUseSendButton && styles["chat-input-send-active"],
                   )}
-                  onClick={() => canSubmit && doSubmit(userInput)}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    if (isVoiceRecording) {
+                      stopVoiceRecording("send");
+                    } else if (canSubmit) {
+                      doSubmit(userInput);
+                    }
+                  }}
                 >
                   <svg
                     className={styles["chat-input-send-icon"]}
