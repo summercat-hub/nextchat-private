@@ -505,6 +505,11 @@
   height: 100%;
 }
 
+.chat-header {
+  flex-shrink: 0;
+  border-bottom: 0;
+}
+
 .chat-body {
   flex: 1;
   overflow: auto;
@@ -589,6 +594,9 @@
   }
 
   .chat-body-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
   }
 }

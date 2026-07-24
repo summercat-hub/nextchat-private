@@ -1528,17 +1528,21 @@ function _Chat() {
   }, [messages, chatStore, navigate, session]);
 
   const [showChatSidePanel, setShowChatSidePanel] = useState(false);
+  const displayTopic =
+    session.topic && session.topic !== DEFAULT_TOPIC ? session.topic : "";
 
   return (
     <>
       <div className={styles.chat} key={session.id}>
-        <div className="window-header" data-tauri-drag-region>
+        <div
+          className={clsx("window-header", styles["chat-header"])}
+          data-tauri-drag-region
+        >
           {isMobileScreen && (
             <div className="window-actions">
               <div className={"window-action-button"}>
                 <IconButton
                   icon={<ReturnIcon />}
-                  bordered
                   title={Locale.Chat.Actions.ChatList}
                   aria={Locale.Chat.Actions.ChatList}
                   onClick={() =>
@@ -1554,21 +1558,20 @@ function _Chat() {
           <div
             className={clsx("window-header-title", styles["chat-body-title"])}
           >
-            <button
-              type="button"
-              className={clsx(
-                "window-header-main-title",
-                styles["chat-body-main-title"],
-              )}
-              title={Locale.Chat.Rename}
-              aria-label={Locale.Chat.Rename}
-              onClick={() => setIsEditingMessage(true)}
-            >
-              {!session.topic ? DEFAULT_TOPIC : session.topic}
-            </button>
-            <div className="window-header-sub-title">
-              {Locale.Chat.SubTitle(session.messages.length)}
-            </div>
+            {displayTopic && (
+              <button
+                type="button"
+                className={clsx(
+                  "window-header-main-title",
+                  styles["chat-body-main-title"],
+                )}
+                title={Locale.Chat.Rename}
+                aria-label={Locale.Chat.Rename}
+                onClick={() => setIsEditingMessage(true)}
+              >
+                {displayTopic}
+              </button>
+            )}
           </div>
           <div className="window-actions">
             <div className="window-action-button">
@@ -1628,7 +1631,6 @@ function _Chat() {
               >
                 <IconButton
                   icon={<MenuIcon />}
-                  bordered
                   title="更多操作"
                   aria="更多操作"
                   ariaExpanded={showHeaderMenu}

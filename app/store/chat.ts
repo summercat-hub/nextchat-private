@@ -688,13 +688,22 @@ export const useChatStore = createPersistStore(
         // remove error messages if any
         const messages = session.messages;
 
-        // should summarize topic after chating more than 50 words
-        const SUMMARIZE_MIN_LEN = 50;
+        const hasCompletedConversation =
+          messages.some(
+            (message) => message.role === "user" && !message.isError,
+          ) &&
+          messages.some(
+            (message) =>
+              message.role === "assistant" &&
+              !message.isError &&
+              !message.streaming &&
+              getMessageTextContent(message).trim().length > 0,
+          );
         if (
-          (config.enableAutoGenerateTitle &&
-            session.topic === DEFAULT_TOPIC &&
-            countMessages(messages) >= SUMMARIZE_MIN_LEN) ||
-          refreshTitle
+          hasCompletedConversation &&
+          ((config.enableAutoGenerateTitle &&
+            session.topic === DEFAULT_TOPIC) ||
+            refreshTitle)
         ) {
           const startIndex = Math.max(
             0,
