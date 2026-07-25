@@ -2353,27 +2353,26 @@ function _Chat() {
                           }
                         >
                           <div className={styles["chat-message-container"]}>
-                            {message?.tools?.length == 0 && showWaiting && (
-                              <div
-                                className={clsx(
-                                  styles["chat-message-status"],
-                                  styles["chat-message-thinking"],
-                                )}
-                                aria-live="polite"
-                              >
-                                <span>正在思考</span>
-                                <span
-                                  className={
-                                    styles["chat-message-thinking-dots"]
-                                  }
-                                  aria-hidden="true"
+                            {(message?.tools?.length ?? 0) === 0 &&
+                              showWaiting && (
+                                <div
+                                  className={clsx(
+                                    styles["chat-message-status"],
+                                    styles["chat-message-thinking"],
+                                  )}
+                                  aria-live="polite"
                                 >
-                                  <span>.</span>
-                                  <span>.</span>
-                                  <span>.</span>
-                                </span>
-                              </div>
-                            )}
+                                  <span>正在思考</span>
+                                  <span
+                                    className={
+                                      styles["chat-message-thinking-dots"]
+                                    }
+                                    aria-hidden="true"
+                                  >
+                                    <LoadingIcon />
+                                  </span>
+                                </div>
+                              )}
                             {/*@ts-ignore*/}
                             {message?.tools?.length > 0 && (
                               <div className={styles["chat-message-tools"]}>
@@ -2399,11 +2398,6 @@ function _Chat() {
                               <Markdown
                                 key={message.streaming ? "loading" : "done"}
                                 content={getMessageTextContent(message)}
-                                loading={
-                                  (message.preview || message.streaming) &&
-                                  message.content.length === 0 &&
-                                  !isUser
-                                }
                                 //   onContextMenu={(e) => onRightClick(e, message)} // hard to use
                                 onDoubleClickCapture={() => {
                                   if (!isMobileScreen) return;
