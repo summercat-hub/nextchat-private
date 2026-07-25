@@ -1585,7 +1585,7 @@
   }
 
   .chat-input-panel {
-    padding: 6px 20px calc(6px + env(safe-area-inset-bottom));
+    padding: 6px 20px calc(20px + env(safe-area-inset-bottom));
     background: var(--surface-primary);
     border-top: 0;
     box-shadow: none;
