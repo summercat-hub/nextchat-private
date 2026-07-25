@@ -44,7 +44,7 @@ const PRIVATE_DEFAULT_TEMPERATURE = 1.0;
 const PRIVATE_DEFAULT_TOP_P = 0.95;
 const PRIVATE_DEFAULT_TOP_K = 64;
 const PRIVATE_DEFAULT_MAX_TOKENS = 8192;
-const PRIVATE_HIGH_MAX_TOKENS = 16000;
+const PRIVATE_HIGH_MAX_TOKENS = 10000;
 const PRIVATE_DEFAULT_HISTORY_MESSAGE_COUNT = 24;
 const PRIVATE_DEFAULT_COMPRESS_THRESHOLD = 4000;
 
@@ -74,21 +74,26 @@ export function applyPrivateChatDefaults(modelConfig: ModelConfig) {
 
   if (modelConfig.reasoning_effort == null) {
     modelConfig.reasoning_effort = "none";
+  } else if (modelConfig.reasoning_effort === "high") {
+    modelConfig.reasoning_effort = "medium";
   }
 
-  if (modelConfig.service_tier == null) {
+  const isPrivateGemma31B = modelConfig.model === PRIVATE_DEFAULT_MODEL;
+  if (isPrivateGemma31B) {
+    modelConfig.service_tier = "priority";
+  } else if (modelConfig.service_tier == null) {
     modelConfig.service_tier = "default";
   }
 
-  const recommendedMaxTokens =
-    modelConfig.reasoning_effort === "high"
-      ? PRIVATE_HIGH_MAX_TOKENS
-      : PRIVATE_DEFAULT_MAX_TOKENS;
+  const reasoningEnabled = modelConfig.reasoning_effort !== "none";
+  const recommendedMaxTokens = reasoningEnabled
+    ? PRIVATE_HIGH_MAX_TOKENS
+    : PRIVATE_DEFAULT_MAX_TOKENS;
   if (
     modelConfig.max_tokens === 4000 ||
-    (modelConfig.max_tokens === 16000 &&
-      modelConfig.reasoning_effort !== "high") ||
-    modelConfig.max_tokens == null
+    modelConfig.max_tokens === 16000 ||
+    modelConfig.max_tokens == null ||
+    (isPrivateGemma31B && modelConfig.max_tokens !== recommendedMaxTokens)
   ) {
     modelConfig.max_tokens = recommendedMaxTokens;
   }
@@ -142,7 +147,7 @@ export const DEFAULT_CONFIG = {
     top_p: PRIVATE_DEFAULT_TOP_P,
     top_k: PRIVATE_DEFAULT_TOP_K,
     max_tokens: PRIVATE_DEFAULT_MAX_TOKENS,
-    reasoning_effort: "none" as "none" | "high",
+    reasoning_effort: "none" as "none" | "low" | "medium" | "high",
     service_tier: "default" as "default" | "priority" | "flex",
     presence_penalty: 0,
     frequency_penalty: 0,

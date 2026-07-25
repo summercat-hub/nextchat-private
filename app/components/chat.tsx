@@ -629,8 +629,8 @@ const INTELLIGENCE_OPTIONS = [
     id: "high",
     label: "高",
     model: MEDIUM_INTELLIGENCE_MODEL,
-    reasoningEffort: "high",
-    maxTokens: 16000,
+    reasoningEffort: "medium",
+    maxTokens: 10000,
   },
 ] as const;
 
@@ -643,7 +643,7 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
   const currentReasoningEffort =
     session.mask.modelConfig.reasoning_effort ?? "none";
   const currentLevel =
-    currentReasoningEffort === "high"
+    currentReasoningEffort !== "none"
       ? "high"
       : currentModel === LOW_INTELLIGENCE_MODEL
       ? "low"
@@ -723,7 +723,10 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
                       modelConfig.top_k = 64;
                       modelConfig.reasoning_effort = option.reasoningEffort;
                       modelConfig.max_tokens = option.maxTokens;
-                      modelConfig.service_tier = "default";
+                      modelConfig.service_tier =
+                        option.model === MEDIUM_INTELLIGENCE_MODEL
+                          ? "priority"
+                          : "default";
                     });
                     setOpen(false);
                   }}
@@ -2333,15 +2336,9 @@ function _Chat() {
                       !(message.preview || message.content.length === 0) &&
                       !isContext;
                     const messageText = getMessageTextContent(message);
-                    const showThinking =
-                      !!message.reasoning &&
-                      !!message.streaming &&
-                      messageText.length === 0;
-                    const showTyping =
+                    const showWaiting =
                       !!message.preview ||
-                      (!!message.streaming &&
-                        !message.reasoning &&
-                        messageText.length === 0);
+                      (!!message.streaming && messageText.length === 0);
 
                     const shouldShowClearContextDivider =
                       i === clearContextIndex - 1;
@@ -2356,35 +2353,27 @@ function _Chat() {
                           }
                         >
                           <div className={styles["chat-message-container"]}>
-                            {message?.tools?.length == 0 &&
-                              (showThinking || showTyping) && (
-                                <div
-                                  className={clsx(
-                                    styles["chat-message-status"],
-                                    showThinking &&
-                                      styles["chat-message-thinking"],
-                                  )}
-                                  aria-live="polite"
+                            {message?.tools?.length == 0 && showWaiting && (
+                              <div
+                                className={clsx(
+                                  styles["chat-message-status"],
+                                  styles["chat-message-thinking"],
+                                )}
+                                aria-live="polite"
+                              >
+                                <span>正在思考</span>
+                                <span
+                                  className={
+                                    styles["chat-message-thinking-dots"]
+                                  }
+                                  aria-hidden="true"
                                 >
-                                  {showThinking ? (
-                                    <>
-                                      <span>正在思考</span>
-                                      <span
-                                        className={
-                                          styles["chat-message-thinking-dots"]
-                                        }
-                                        aria-hidden="true"
-                                      >
-                                        <span>.</span>
-                                        <span>.</span>
-                                        <span>.</span>
-                                      </span>
-                                    </>
-                                  ) : (
-                                    Locale.Chat.Typing
-                                  )}
-                                </div>
-                              )}
+                                  <span>.</span>
+                                  <span>.</span>
+                                  <span>.</span>
+                                </span>
+                              </div>
+                            )}
                             {/*@ts-ignore*/}
                             {message?.tools?.length > 0 && (
                               <div className={styles["chat-message-tools"]}>

@@ -442,7 +442,7 @@ export const useChatStore = createPersistStore(
         const botMessage: ChatMessage = createMessage({
           role: "assistant",
           streaming: true,
-          reasoning: modelConfig.reasoning_effort === "high",
+          reasoning: modelConfig.reasoning_effort !== "none",
           model: modelConfig.model,
         });
 

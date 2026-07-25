@@ -70,6 +70,7 @@ export interface RequestPayload {
   max_completion_tokens?: number;
   reasoning?: {
     enabled: boolean;
+    effort?: "low" | "medium" | "high";
   };
   service_tier?: "default" | "priority" | "flex";
   stream_options?: {
@@ -211,8 +212,15 @@ export class ChatGPTApi implements LLMApi {
       options.config.model.startsWith("o4-mini");
     const isGpt5 = options.config.model.startsWith("gpt-5");
     const isGemma4 = /google\/gemma-4-/i.test(modelConfig.model);
-    const reasoningEnabled =
-      isGemma4 && modelConfig.reasoning_effort === "high";
+    const isPrivateGemma31B = modelConfig.model === "google/gemma-4-31B-it";
+    const activeReasoningEffort =
+      modelConfig.reasoning_effort === "none"
+        ? undefined
+        : modelConfig.reasoning_effort;
+    const reasoningEnabled = isGemma4 && !!activeReasoningEffort;
+    const requestedServiceTier = isPrivateGemma31B
+      ? "priority"
+      : modelConfig.service_tier ?? "default";
     if (isDalle3) {
       const prompt = getMessageTextContent(
         options.messages.slice(-1)?.pop() as any,
@@ -262,10 +270,15 @@ export class ChatGPTApi implements LLMApi {
         frequency_penalty: !isO1OrO3 ? modelConfig.frequency_penalty : 0,
         top_p: !isO1OrO3 ? modelConfig.top_p : 1,
         top_k: isGemma4 ? modelConfig.top_k : undefined,
-        reasoning: isGemma4 ? { enabled: reasoningEnabled } : undefined,
+        reasoning: isGemma4
+          ? {
+              enabled: reasoningEnabled,
+              effort: reasoningEnabled ? activeReasoningEffort : undefined,
+            }
+          : undefined,
         service_tier:
-          isGemma4 && modelConfig.service_tier !== "default"
-            ? modelConfig.service_tier
+          isGemma4 && requestedServiceTier !== "default"
+            ? requestedServiceTier
             : undefined,
         stream_options: options.config.stream
           ? { include_usage: true, continuous_usage_stats: false }
@@ -315,9 +328,8 @@ export class ChatGPTApi implements LLMApi {
     const logRequestMetrics = (finishedAt = Date.now()) => {
       console.info("[DeepInfra Metrics]", {
         model: modelConfig.model,
-        reasoning: reasoningEnabled ? "high" : "none",
-        serviceTier:
-          confirmedServiceTier ?? modelConfig.service_tier ?? "default",
+        reasoning: activeReasoningEffort ?? "none",
+        serviceTier: confirmedServiceTier ?? requestedServiceTier,
         messageCount:
           "messages" in requestPayload ? requestPayload.messages.length : 1,
         temperature:
@@ -347,8 +359,8 @@ export class ChatGPTApi implements LLMApi {
 
     console.info("[DeepInfra Request]", {
       model: modelConfig.model,
-      reasoning: reasoningEnabled ? "high" : "none",
-      serviceTier: modelConfig.service_tier ?? "default",
+      reasoning: activeReasoningEffort ?? "none",
+      serviceTier: requestedServiceTier,
       messageCount:
         "messages" in requestPayload ? requestPayload.messages.length : 1,
       temperature:
