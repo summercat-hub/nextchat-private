@@ -312,8 +312,13 @@ export class ChatGPTApi implements LLMApi {
     }
 
     const requestStartedAt = Date.now();
+    let streamOpenedAt: number | undefined;
+    let firstSseEventAt: number | undefined;
     let firstTokenAt: number | undefined;
+    let firstReasoningTokenAt: number | undefined;
     let firstVisibleTokenAt: number | undefined;
+    let hiddenReasoningChars = 0;
+    let visibleAnswerChars = 0;
     let responseUsage:
       | {
           prompt_tokens?: number;
@@ -325,11 +330,30 @@ export class ChatGPTApi implements LLMApi {
     let estimatedCost: number | undefined;
     let confirmedServiceTier: string | undefined;
 
+    const elapsedMs = (timestamp?: number) =>
+      timestamp == null ? undefined : timestamp - requestStartedAt;
+    const logTimingMilestone = (
+      milestone: string,
+      timestamp: number,
+      details: Record<string, unknown> = {},
+    ) => {
+      console.info("[DeepInfra Timing]", {
+        milestone,
+        elapsedMs: elapsedMs(timestamp),
+        model: modelConfig.model,
+        reasoning: activeReasoningEffort ?? "none",
+        requestedServiceTier,
+        ...details,
+      });
+    };
+
     const logRequestMetrics = (finishedAt = Date.now()) => {
       console.info("[DeepInfra Metrics]", {
         model: modelConfig.model,
         reasoning: activeReasoningEffort ?? "none",
-        serviceTier: confirmedServiceTier ?? requestedServiceTier,
+        requestedServiceTier,
+        confirmedServiceTier,
+        effectiveServiceTier: confirmedServiceTier ?? requestedServiceTier,
         messageCount:
           "messages" in requestPayload ? requestPayload.messages.length : 1,
         temperature:
@@ -342,12 +366,13 @@ export class ChatGPTApi implements LLMApi {
           "max_tokens" in requestPayload
             ? requestPayload.max_tokens
             : undefined,
-        timeToFirstTokenMs: firstTokenAt
-          ? firstTokenAt - requestStartedAt
-          : undefined,
-        timeToVisibleAnswerMs: firstVisibleTokenAt
-          ? firstVisibleTokenAt - requestStartedAt
-          : undefined,
+        timeToStreamOpenMs: elapsedMs(streamOpenedAt),
+        timeToFirstSseEventMs: elapsedMs(firstSseEventAt),
+        timeToFirstTokenMs: elapsedMs(firstTokenAt),
+        timeToFirstReasoningTokenMs: elapsedMs(firstReasoningTokenAt),
+        timeToVisibleAnswerMs: elapsedMs(firstVisibleTokenAt),
+        hiddenReasoningChars,
+        visibleAnswerChars,
         totalDurationMs: finishedAt - requestStartedAt,
         promptTokens: responseUsage?.prompt_tokens,
         completionTokens: responseUsage?.completion_tokens,
@@ -438,7 +463,16 @@ export class ChatGPTApi implements LLMApi {
               json.estimated_cost ??
               json.usage?.estimated_cost ??
               estimatedCost;
-            confirmedServiceTier = json.service_tier ?? confirmedServiceTier;
+            const incomingServiceTier = json.service_tier as string | undefined;
+            if (incomingServiceTier && !confirmedServiceTier) {
+              confirmedServiceTier = incomingServiceTier;
+              logTimingMilestone("service_tier_confirmed", Date.now(), {
+                confirmedServiceTier,
+              });
+            } else {
+              confirmedServiceTier =
+                incomingServiceTier ?? confirmedServiceTier;
+            }
 
             const choices = json.choices as Array<{
               delta: {
@@ -475,13 +509,6 @@ export class ChatGPTApi implements LLMApi {
               choices[0]?.delta?.reasoning_content ??
               choices[0]?.delta?.reasoning;
             const content = choices[0]?.delta?.content;
-            const tokenReceivedAt = Date.now();
-            if ((reasoning || content) && !firstTokenAt) {
-              firstTokenAt = tokenReceivedAt;
-            }
-            if (content && !firstVisibleTokenAt) {
-              firstVisibleTokenAt = tokenReceivedAt;
-            }
 
             // Skip if both content and reasoning_content are empty or null
             if (
@@ -530,8 +557,45 @@ export class ChatGPTApi implements LLMApi {
           },
           {
             ...options,
+            onStreamOpen(response: Response) {
+              if (streamOpenedAt) return;
+              streamOpenedAt = Date.now();
+              logTimingMilestone("stream_open", streamOpenedAt, {
+                status: response.status,
+                contentType: response.headers.get("content-type"),
+              });
+            },
+            onSseEvent() {
+              if (firstSseEventAt) return;
+              firstSseEventAt = Date.now();
+              logTimingMilestone("first_sse_event", firstSseEventAt);
+            },
+            onReasoningChunk(length: number) {
+              hiddenReasoningChars += length;
+              if (firstReasoningTokenAt) return;
+              firstReasoningTokenAt = Date.now();
+              firstTokenAt = firstTokenAt ?? firstReasoningTokenAt;
+              logTimingMilestone(
+                "first_reasoning_token",
+                firstReasoningTokenAt,
+              );
+            },
+            onVisibleChunk(length: number) {
+              visibleAnswerChars += length;
+              if (firstVisibleTokenAt) return;
+              firstVisibleTokenAt = Date.now();
+              firstTokenAt = firstTokenAt ?? firstVisibleTokenAt;
+              logTimingMilestone("first_visible_answer", firstVisibleTokenAt, {
+                hiddenReasoningCharsBeforeAnswer: hiddenReasoningChars,
+              });
+            },
             onFinish(message: string, responseRes: Response) {
-              logRequestMetrics();
+              const finishedAt = Date.now();
+              logTimingMilestone("completed", finishedAt, {
+                hiddenReasoningChars,
+                visibleAnswerChars,
+              });
+              logRequestMetrics(finishedAt);
               options.onFinish(message, responseRes);
             },
           },

@@ -630,7 +630,7 @@ const INTELLIGENCE_OPTIONS = [
     label: "高",
     model: MEDIUM_INTELLIGENCE_MODEL,
     reasoningEffort: "medium",
-    maxTokens: 10000,
+    maxTokens: 6144,
   },
 ] as const;
 

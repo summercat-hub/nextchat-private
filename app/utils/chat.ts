@@ -590,10 +590,13 @@ export function streamWithThink(
       }
       console.debug("[ChatAPI] end");
       if (pendingTaggedContent) {
+        const pendingLength = pendingTaggedContent.length;
         if (lastIsThinkingTagged) {
           hiddenThinkingText += pendingTaggedContent;
+          options.onReasoningChunk?.(pendingLength);
         } else {
           remainText += pendingTaggedContent;
+          options.onVisibleChunk?.(pendingLength);
         }
         pendingTaggedContent = "";
       }
@@ -638,6 +641,7 @@ export function streamWithThink(
         const contentType = res.headers.get("content-type");
         console.log("[Request] response content type: ", contentType);
         responseRes = res;
+        options.onStreamOpen?.(res);
 
         if (contentType?.startsWith("text/plain")) {
           responseText = await res.clone().text();
@@ -680,6 +684,7 @@ export function streamWithThink(
         if (!text || text.trim().length === 0) {
           return;
         }
+        options.onSseEvent?.();
         try {
           const chunk = parseSSE(text, runTools);
           // Skip if content is empty
@@ -689,13 +694,20 @@ export function streamWithThink(
 
           if (chunk.isThinking) {
             hiddenThinkingText += chunk.content;
+            options.onReasoningChunk?.(chunk.content.length);
             isInThinkingMode = true;
             lastIsThinking = true;
             return;
           }
 
           const wasThinking = isInThinkingMode || lastIsThinking;
+          const hiddenLengthBeforeStrip = hiddenThinkingText.length;
           chunk.content = stripTaggedThinkingContent(chunk.content);
+          const hiddenLengthDelta =
+            hiddenThinkingText.length - hiddenLengthBeforeStrip;
+          if (hiddenLengthDelta > 0) {
+            options.onReasoningChunk?.(hiddenLengthDelta);
+          }
           lastIsThinking = lastIsThinkingTagged;
 
           if (!chunk.content || chunk.content.length === 0) {
@@ -705,6 +717,7 @@ export function streamWithThink(
             return;
           }
 
+          options.onVisibleChunk?.(chunk.content.length);
           isInThinkingMode = false;
           if (wasThinking) {
             const hasVisibleText =
