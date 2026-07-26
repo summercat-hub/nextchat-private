@@ -1621,6 +1621,14 @@
     height: 36px;
   }
 
+  .chat-input-plus::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 999px;
+    background: transparent;
+  }
+
   .chat-input-menu,
   .chat-input-actions-focused .chat-input-menu {
     left: -8px;
@@ -1678,9 +1686,26 @@
     height: 34px;
   }
 
+  .chat-input-panel-inner:not(.chat-input-panel-inner-expanded)
+    .chat-input-voice {
+    right: 59px;
+  }
+
+  .chat-input-panel-inner:not(.chat-input-panel-inner-expanded)
+    .chat-input-voice::after,
+  .chat-input-panel-inner:not(.chat-input-panel-inner-expanded)
+    .chat-input-send::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 999px;
+    background: transparent;
+  }
+
   .chat-input-microphone-icon {
-    width: 25.5px;
-    height: 25.5px;
+    width: 23px;
+    height: 23px;
+    stroke-width: 1.7;
   }
 
   .chat-input-send {
@@ -1694,6 +1719,7 @@
   .chat-input-send-icon {
     width: 22px;
     height: 22px;
+    stroke-width: 2.1;
   }
 }
 
