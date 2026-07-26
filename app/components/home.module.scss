@@ -148,7 +148,9 @@
     z-index: 0;
     height: var(--full-height);
     padding-top: calc(14px + env(safe-area-inset-top));
-    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    padding-right: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    padding-left: 16px;
     transform-origin: left center;
     transform: translate3d(
         calc(var(--drawer-inverse-progress, 1) * -14px),

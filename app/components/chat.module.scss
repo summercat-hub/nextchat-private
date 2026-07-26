@@ -1561,8 +1561,8 @@
 
 @media only screen and (max-width: 640px) {
   .chat-intelligence-layer {
-    bottom: calc(27px + env(safe-area-inset-bottom));
-    width: calc(100% - 40px);
+    bottom: calc(23px + env(safe-area-inset-bottom));
+    width: calc(100% - 32px);
     height: 34px;
   }
 
@@ -1585,7 +1585,7 @@
   }
 
   .chat-input-panel {
-    padding: 6px 20px calc(20px + env(safe-area-inset-bottom));
+    padding: 6px 16px calc(16px + env(safe-area-inset-bottom));
     background: var(--surface-primary);
     border-top: 0;
     box-shadow: none;
@@ -1610,8 +1610,8 @@
   }
 
   .chat-input-actions {
-    left: 26px;
-    bottom: calc(26px + env(safe-area-inset-bottom));
+    left: 22px;
+    bottom: calc(22px + env(safe-area-inset-bottom));
     width: 36px;
     height: 36px;
   }
@@ -1688,7 +1688,7 @@
 
   .chat-input-panel-inner:not(.chat-input-panel-inner-expanded)
     .chat-input-voice {
-    right: 59px;
+    right: 53px;
   }
 
   .chat-input-panel-inner:not(.chat-input-panel-inner-expanded)
