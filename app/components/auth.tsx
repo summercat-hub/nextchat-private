@@ -7,7 +7,6 @@ import { useAccessStore } from "../store";
 import Locale from "../locales";
 import { getClientConfig } from "../config/client";
 import { PasswordInput } from "./ui-lib";
-import LeftIcon from "@/app/icons/left.svg";
 
 export function AuthPage() {
   const navigate = useNavigate();
@@ -23,17 +22,7 @@ export function AuthPage() {
 
   return (
     <div className={styles["auth-page"]}>
-      <div className={styles["auth-header"]}>
-        <IconButton
-          icon={<LeftIcon />}
-          text={Locale.Auth.Return}
-          onClick={() => navigate(Path.Home)}
-        ></IconButton>
-      </div>
       <main className={styles["auth-content"]}>
-        <div className={styles["auth-brand"]} aria-hidden="true">
-          O
-        </div>
         <h1 className={styles["auth-title"]}>{Locale.Auth.Title}</h1>
         <p className={styles["auth-tips"]}>{Locale.Auth.Tips}</p>
 
