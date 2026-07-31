@@ -265,7 +265,7 @@ export function SideBar(props: {
       shouldNarrow={shouldNarrow}
       {...props}
     >
-      <SideBarHeader title="True Chat" shouldNarrow={shouldNarrow}>
+      <SideBarHeader title="Open Chat" shouldNarrow={shouldNarrow}>
         {mcpEnabled && (
           <div className={styles["sidebar-header-bar"]}>
             <IconButton

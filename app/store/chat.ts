@@ -877,7 +877,7 @@ export const useChatStore = createPersistStore(
   },
   {
     name: StoreKey.Chat,
-    version: 3.4,
+    version: 3.5,
     migrate(persistedState, version) {
       const state = persistedState as any;
       const newState = JSON.parse(
@@ -943,6 +943,12 @@ export const useChatStore = createPersistStore(
       }
 
       if (version < 3.4) {
+        newState.sessions.forEach((s) => {
+          applyPrivateChatDefaults(s.mask.modelConfig);
+        });
+      }
+
+      if (version < 3.5) {
         newState.sessions.forEach((s) => {
           applyPrivateChatDefaults(s.mask.modelConfig);
         });

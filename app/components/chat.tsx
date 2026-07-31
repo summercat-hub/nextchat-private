@@ -82,6 +82,7 @@ import {
   DEFAULT_TTS_ENGINE,
   ModelProvider,
   Path,
+  PRIVATE_CHAT_MODEL,
   REQUEST_TIMEOUT_MS,
   ServiceProvider,
   UNFINISHED_INPUT,
@@ -607,30 +608,27 @@ function useScrollToBottom(
   };
 }
 
-const LOW_INTELLIGENCE_MODEL = "google/gemma-4-26B-A4B-it";
-const MEDIUM_INTELLIGENCE_MODEL = "google/gemma-4-31B-it";
-
 const INTELLIGENCE_OPTIONS = [
   {
     id: "low",
     label: "低",
-    model: LOW_INTELLIGENCE_MODEL,
-    reasoningEffort: "none",
-    maxTokens: 8192,
+    model: PRIVATE_CHAT_MODEL,
+    reasoningEffort: "medium",
+    maxTokens: 16384,
   },
   {
     id: "medium",
     label: "中",
-    model: MEDIUM_INTELLIGENCE_MODEL,
-    reasoningEffort: "none",
-    maxTokens: 8192,
+    model: PRIVATE_CHAT_MODEL,
+    reasoningEffort: "high",
+    maxTokens: 16384,
   },
   {
     id: "high",
     label: "高",
-    model: MEDIUM_INTELLIGENCE_MODEL,
-    reasoningEffort: "medium",
-    maxTokens: 6144,
+    model: PRIVATE_CHAT_MODEL,
+    reasoningEffort: "xhigh",
+    maxTokens: 16384,
   },
 ] as const;
 
@@ -643,10 +641,12 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
   const currentReasoningEffort =
     session.mask.modelConfig.reasoning_effort ?? "none";
   const currentLevel =
-    currentReasoningEffort !== "none"
-      ? "high"
-      : currentModel === LOW_INTELLIGENCE_MODEL
-      ? "low"
+    currentModel === PRIVATE_CHAT_MODEL
+      ? currentReasoningEffort === "xhigh"
+        ? "high"
+        : currentReasoningEffort === "high"
+        ? "medium"
+        : "low"
       : "medium";
   const currentLabel =
     currentLevel === "low" ? "低" : currentLevel === "high" ? "高" : "中";
@@ -723,10 +723,7 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
                       modelConfig.top_k = 64;
                       modelConfig.reasoning_effort = option.reasoningEffort;
                       modelConfig.max_tokens = option.maxTokens;
-                      modelConfig.service_tier =
-                        option.model === MEDIUM_INTELLIGENCE_MODEL
-                          ? "priority"
-                          : "default";
+                      modelConfig.service_tier = "default";
                     });
                     setOpen(false);
                   }}

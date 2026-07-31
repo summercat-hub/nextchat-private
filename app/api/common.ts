@@ -495,6 +495,15 @@ export async function requestOpenai(req: NextRequest) {
     baseUrl = baseUrl.slice(0, -1);
   }
 
+  // Keep existing DeepInfra deployments working while the site switches to
+  // the standard OpenAI-compatible path used by OpenRouter.
+  if (
+    /api\.deepinfra\.com/i.test(baseUrl) &&
+    (path === "v1/chat/completions" || path === "v1/models")
+  ) {
+    path = path.replace("v1/", "v1/openai/");
+  }
+
   console.log("[Proxy] ", path);
   console.log("[Base Url]", baseUrl);
 

@@ -1,5 +1,9 @@
 import md5 from "spark-md5";
-import { DEFAULT_MODELS, DEFAULT_GA_ID } from "../constant";
+import {
+  DEFAULT_MODELS,
+  DEFAULT_GA_ID,
+  OPENROUTER_BASE_URL,
+} from "../constant";
 import { isGPT4Model } from "../utils/model";
 
 declare global {
@@ -8,6 +12,7 @@ declare global {
       PROXY_URL?: string; // docker only
 
       OPENAI_API_KEY?: string;
+      OPENROUTER_API_KEY?: string;
       CODE?: string;
 
       BASE_URL?: string;
@@ -131,9 +136,7 @@ function getApiKey(keys?: string) {
   const apiKey = apiKeys[randomIndex];
   if (apiKey) {
     console.log(
-      `[Server Config] using ${randomIndex + 1} of ${
-        apiKeys.length
-      } api key - ${apiKey}`,
+      `[Server Config] using ${randomIndex + 1} of ${apiKeys.length} api key`,
     );
   }
 
@@ -191,12 +194,16 @@ export const getServerSideConfig = () => {
     process.env.WHITE_WEBDAV_ENDPOINTS ?? ""
   ).split(",");
 
-  const openaiApiKey = getApiKey(process.env.OPENAI_API_KEY);
+  const openaiApiKey = getApiKey(
+    process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
+  );
   const webSearchRouterApiKey =
     getApiKey(process.env.WEB_SEARCH_ROUTER_API_KEY) || openaiApiKey;
 
   return {
-    baseUrl: process.env.BASE_URL,
+    baseUrl:
+      process.env.BASE_URL ||
+      (process.env.OPENROUTER_API_KEY ? OPENROUTER_BASE_URL : undefined),
     apiKey: openaiApiKey,
     openaiOrgId: process.env.OPENAI_ORG_ID,
 

@@ -9,8 +9,8 @@ import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 import { getServerSideConfig } from "./config/server";
 
 export const metadata: Metadata = {
-  title: "True Chat",
-  applicationName: "True Chat",
+  title: "Open Chat",
+  applicationName: "Open Chat",
   description: "简单、私密的 AI 聊天助手。",
   manifest: "/site.webmanifest",
   icons: {
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   appleWebApp: {
-    title: "True Chat",
+    title: "Open Chat",
     statusBarStyle: "default",
   },
 };

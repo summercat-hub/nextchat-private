@@ -5,6 +5,7 @@ import {
   OPENAI_BASE_URL,
   DEFAULT_MODELS,
   OpenaiPath,
+  PRIVATE_CHAT_MODEL,
   Azure,
   REQUEST_TIMEOUT_MS,
   ServiceProvider,
@@ -70,7 +71,7 @@ export interface RequestPayload {
   max_completion_tokens?: number;
   reasoning?: {
     enabled: boolean;
-    effort?: "low" | "medium" | "high";
+    effort?: "low" | "medium" | "high" | "xhigh";
   };
   service_tier?: "default" | "priority" | "flex";
   stream_options?: {
@@ -210,17 +211,16 @@ export class ChatGPTApi implements LLMApi {
       options.config.model.startsWith("o1") ||
       options.config.model.startsWith("o3") ||
       options.config.model.startsWith("o4-mini");
-    const isGpt5 = options.config.model.startsWith("gpt-5");
+    const isGpt5 = /(^|\/)gpt-5(?:[.-]|$)/i.test(modelConfig.model);
     const isGemma4 = /google\/gemma-4-/i.test(modelConfig.model);
-    const isPrivateGemma31B = modelConfig.model === "google/gemma-4-31B-it";
+    const isPrivateGpt56Luna = modelConfig.model === PRIVATE_CHAT_MODEL;
     const activeReasoningEffort =
       modelConfig.reasoning_effort === "none"
         ? undefined
         : modelConfig.reasoning_effort;
-    const reasoningEnabled = isGemma4 && !!activeReasoningEffort;
-    const requestedServiceTier = isPrivateGemma31B
-      ? "priority"
-      : modelConfig.service_tier ?? "default";
+    const reasoningEnabled =
+      (isGemma4 || isPrivateGpt56Luna) && !!activeReasoningEffort;
+    const requestedServiceTier = modelConfig.service_tier ?? "default";
     if (isDalle3) {
       const prompt = getMessageTextContent(
         options.messages.slice(-1)?.pop() as any,
@@ -246,7 +246,7 @@ export class ChatGPTApi implements LLMApi {
           messages.push({ role: v.role, content });
       }
 
-      if (reasoningEnabled) {
+      if (isGemma4 && reasoningEnabled) {
         const thinkingToken = "<|think|>";
         const systemMessage = messages.find(
           (message) => message.role === "system",
@@ -270,7 +270,7 @@ export class ChatGPTApi implements LLMApi {
         frequency_penalty: !isO1OrO3 ? modelConfig.frequency_penalty : 0,
         top_p: !isO1OrO3 ? modelConfig.top_p : 1,
         top_k: isGemma4 ? modelConfig.top_k : undefined,
-        reasoning: isGemma4
+        reasoning: isGemma4 || isPrivateGpt56Luna
           ? {
               enabled: reasoningEnabled,
               effort: reasoningEnabled ? activeReasoningEffort : undefined,
@@ -337,7 +337,7 @@ export class ChatGPTApi implements LLMApi {
       timestamp: number,
       details: Record<string, unknown> = {},
     ) => {
-      console.info("[DeepInfra Timing]", {
+      console.info("[Model Timing]", {
         milestone,
         elapsedMs: elapsedMs(timestamp),
         model: modelConfig.model,
@@ -348,7 +348,7 @@ export class ChatGPTApi implements LLMApi {
     };
 
     const logRequestMetrics = (finishedAt = Date.now()) => {
-      console.info("[DeepInfra Metrics]", {
+      console.info("[Model Metrics]", {
         model: modelConfig.model,
         reasoning: activeReasoningEffort ?? "none",
         requestedServiceTier,
@@ -382,7 +382,7 @@ export class ChatGPTApi implements LLMApi {
       });
     };
 
-    console.info("[DeepInfra Request]", {
+    console.info("[Model Request]", {
       model: modelConfig.model,
       reasoning: activeReasoningEffort ?? "none",
       serviceTier: requestedServiceTier,
@@ -395,7 +395,11 @@ export class ChatGPTApi implements LLMApi {
       topP: "top_p" in requestPayload ? requestPayload.top_p : undefined,
       topK: "top_k" in requestPayload ? requestPayload.top_k : undefined,
       maxTokens:
-        "max_tokens" in requestPayload ? requestPayload.max_tokens : undefined,
+        "max_completion_tokens" in requestPayload
+          ? requestPayload.max_completion_tokens
+          : "max_tokens" in requestPayload
+          ? requestPayload.max_tokens
+          : undefined,
       stream: "stream" in requestPayload ? requestPayload.stream : false,
     });
 

@@ -11,6 +11,7 @@ import {
   DEFAULT_TTS_MODELS,
   DEFAULT_TTS_VOICE,
   DEFAULT_TTS_VOICES,
+  PRIVATE_CHAT_MODEL,
   StoreKey,
   ServiceProvider,
 } from "../constant";
@@ -38,21 +39,56 @@ export enum Theme {
 
 const config = getClientConfig();
 
-const PRIVATE_DEFAULT_MODEL = "google/gemma-4-31B-it" as ModelType;
+const LEGACY_LOW_INTELLIGENCE_MODEL = "google/gemma-4-26B-A4B-it";
+const LEGACY_STANDARD_INTELLIGENCE_MODEL = "google/gemma-4-31B-it";
+const PRIVATE_DEFAULT_MODEL = PRIVATE_CHAT_MODEL as ModelType;
 const PRIVATE_DEFAULT_PROVIDER = ServiceProvider.OpenAI;
 const PRIVATE_DEFAULT_TEMPERATURE = 1.0;
 const PRIVATE_DEFAULT_TOP_P = 0.95;
 const PRIVATE_DEFAULT_TOP_K = 64;
-const PRIVATE_DEFAULT_MAX_TOKENS = 8192;
-const PRIVATE_HIGH_MAX_TOKENS = 6144;
+const PRIVATE_DEFAULT_MAX_TOKENS = 16384;
+const LEGACY_DEFAULT_MAX_TOKENS = 8192;
+const PRIVATE_DEFAULT_REASONING_EFFORT = "high" as const;
 const PRIVATE_DEFAULT_HISTORY_MESSAGE_COUNT = 24;
 const PRIVATE_DEFAULT_COMPRESS_THRESHOLD = 4000;
+
+function migrateLegacyPrivateModel(modelConfig: ModelConfig) {
+  if (
+    modelConfig.model !== LEGACY_LOW_INTELLIGENCE_MODEL &&
+    modelConfig.model !== LEGACY_STANDARD_INTELLIGENCE_MODEL
+  ) {
+    return;
+  }
+
+  const isLegacyLow = modelConfig.model === LEGACY_LOW_INTELLIGENCE_MODEL;
+  const hadReasoning =
+    modelConfig.reasoning_effort != null &&
+    modelConfig.reasoning_effort !== "none";
+
+  modelConfig.model = PRIVATE_DEFAULT_MODEL;
+  modelConfig.providerName = PRIVATE_DEFAULT_PROVIDER;
+  modelConfig.reasoning_effort = isLegacyLow
+    ? "medium"
+    : hadReasoning
+    ? "xhigh"
+    : "high";
+  modelConfig.service_tier = "default";
+  modelConfig.max_tokens = PRIVATE_DEFAULT_MAX_TOKENS;
+}
 
 export function applyPrivateChatDefaults(modelConfig: ModelConfig) {
   if (!modelConfig) return;
 
+  migrateLegacyPrivateModel(modelConfig);
+
   if (!modelConfig.model || modelConfig.model === "gpt-4o-mini") {
     modelConfig.model = PRIVATE_DEFAULT_MODEL;
+    modelConfig.providerName = PRIVATE_DEFAULT_PROVIDER;
+    modelConfig.reasoning_effort = PRIVATE_DEFAULT_REASONING_EFFORT;
+  }
+
+  const isPrivateModel = modelConfig.model === PRIVATE_DEFAULT_MODEL;
+  if (isPrivateModel) {
     modelConfig.providerName = PRIVATE_DEFAULT_PROVIDER;
   }
 
@@ -73,27 +109,28 @@ export function applyPrivateChatDefaults(modelConfig: ModelConfig) {
   }
 
   if (modelConfig.reasoning_effort == null) {
-    modelConfig.reasoning_effort = "none";
-  } else if (modelConfig.reasoning_effort === "high") {
-    modelConfig.reasoning_effort = "medium";
+    modelConfig.reasoning_effort = isPrivateModel
+      ? PRIVATE_DEFAULT_REASONING_EFFORT
+      : "none";
   }
 
-  const isPrivateGemma31B = modelConfig.model === PRIVATE_DEFAULT_MODEL;
-  if (isPrivateGemma31B) {
-    modelConfig.service_tier = "priority";
+  if (isPrivateModel) {
+    modelConfig.service_tier = "default";
   } else if (modelConfig.service_tier == null) {
     modelConfig.service_tier = "default";
   }
 
   const reasoningEnabled = modelConfig.reasoning_effort !== "none";
-  const recommendedMaxTokens = reasoningEnabled
-    ? PRIVATE_HIGH_MAX_TOKENS
-    : PRIVATE_DEFAULT_MAX_TOKENS;
+  const recommendedMaxTokens = isPrivateModel
+    ? PRIVATE_DEFAULT_MAX_TOKENS
+    : reasoningEnabled
+    ? 6144
+    : LEGACY_DEFAULT_MAX_TOKENS;
   if (
     modelConfig.max_tokens === 4000 ||
     modelConfig.max_tokens === 16000 ||
     modelConfig.max_tokens == null ||
-    (isPrivateGemma31B && modelConfig.max_tokens !== recommendedMaxTokens)
+    (isPrivateModel && modelConfig.max_tokens === LEGACY_DEFAULT_MAX_TOKENS)
   ) {
     modelConfig.max_tokens = recommendedMaxTokens;
   }
@@ -147,7 +184,12 @@ export const DEFAULT_CONFIG = {
     top_p: PRIVATE_DEFAULT_TOP_P,
     top_k: PRIVATE_DEFAULT_TOP_K,
     max_tokens: PRIVATE_DEFAULT_MAX_TOKENS,
-    reasoning_effort: "none" as "none" | "low" | "medium" | "high",
+    reasoning_effort: PRIVATE_DEFAULT_REASONING_EFFORT as
+      | "none"
+      | "low"
+      | "medium"
+      | "high"
+      | "xhigh",
     service_tier: "default" as "default" | "priority" | "flex",
     presence_penalty: 0,
     frequency_penalty: 0,
@@ -275,7 +317,7 @@ export const useAppConfig = createPersistStore(
   }),
   {
     name: StoreKey.Config,
-    version: 4.2,
+    version: 4.3,
 
     merge(persistedState, currentState) {
       const state = persistedState as ChatConfig | undefined;
@@ -336,6 +378,10 @@ export const useAppConfig = createPersistStore(
       }
 
       if (version < 4.2) {
+        applyPrivateChatDefaults(state.modelConfig);
+      }
+
+      if (version < 4.3) {
         applyPrivateChatDefaults(state.modelConfig);
       }
 

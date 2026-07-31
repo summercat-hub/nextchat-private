@@ -12,7 +12,10 @@ export const RUNTIME_CONFIG_DOM = "danger-runtime-config";
 export const STABILITY_BASE_URL = "https://api.stability.ai";
 
 export const OPENAI_BASE_URL = "https://api.openai.com";
+export const OPENROUTER_BASE_URL = "https://openrouter.ai/api";
 export const ANTHROPIC_BASE_URL = "https://api.anthropic.com";
+
+export const PRIVATE_CHAT_MODEL = "openai/gpt-5.6-luna";
 
 export const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/";
 
@@ -176,12 +179,12 @@ export const Anthropic = {
 };
 
 export const OpenaiPath = {
-  ChatPath: "v1/openai/chat/completions",
+  ChatPath: "v1/chat/completions",
   SpeechPath: "v1/audio/speech",
   ImagePath: "v1/images/generations",
   UsagePath: "dashboard/billing/usage",
   SubsPath: "dashboard/billing/subscription",
-  ListModelPath: "v1/openai/models",
+  ListModelPath: "v1/models",
 };
 
 export const Azure = {
@@ -426,6 +429,7 @@ export const DEEPSEEK_SUMMARIZE_MODEL = "deepseek-chat";
 
 export const KnowledgeCutOffDate: Record<string, string> = {
   default: "2021-09",
+  "openai/gpt-5.6-luna": "2026-02",
   "gpt-4-turbo": "2023-12",
   "gpt-4-turbo-2024-04-09": "2023-12",
   "gpt-4-turbo-preview": "2023-12",
