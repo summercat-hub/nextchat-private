@@ -1,5 +1,5 @@
 .settings {
-  --list-item-title-font-size: 17px;
+  --list-item-title-font-size: 16px;
 
   width: 100%;
   max-width: 920px;
@@ -7,7 +7,7 @@
   padding: 24px clamp(16px, 3vw, 32px) 40px;
   overflow: auto;
   box-sizing: border-box;
-  font-size: 17px;
+  font-size: 16px;
 
   input,
   select,
@@ -15,6 +15,68 @@
   button {
     font-size: inherit;
   }
+}
+
+.settings-section {
+  margin: 0 0 24px;
+}
+
+.settings-section-title {
+  margin: 0 0 8px 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.015em;
+}
+
+.theme-selector {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--surface-secondary);
+
+  button {
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition:
+      color var(--motion-fast) var(--ease-out),
+      background-color var(--motion-fast) var(--ease-out),
+      box-shadow var(--motion-fast) var(--ease-out),
+      transform var(--motion-press) ease-out;
+
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+
+  .theme-option-selected {
+    background: var(--surface-primary);
+    color: var(--text-primary);
+    box-shadow: var(--control-shadow);
+  }
+}
+
+.settings-disclosure {
+  color: var(--text-tertiary);
+  font-size: 28px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.settings-modal-description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .advanced-settings {
@@ -69,9 +131,19 @@
   padding: 16px 16px 0;
 }
 
-@media only screen and (max-width: 640px) {
+@media only screen and (max-width: 860px) {
   .settings {
-    padding: 14px 10px calc(24px + env(safe-area-inset-bottom));
+    padding: 14px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .theme-selector {
+    width: min(100%, 260px);
+
+    button {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 0 8px;
+    }
   }
 
   .advanced-settings-summary {

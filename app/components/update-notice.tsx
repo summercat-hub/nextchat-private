@@ -17,15 +17,15 @@ export function UpdateNotice() {
 
     if (storage.getItem(UPDATE_NOTICE_STORAGE_KEY)) return;
 
-    // Mark it before rendering so a refresh during the same visit cannot show
-    // the announcement twice.
-    storage.setItem(UPDATE_NOTICE_STORAGE_KEY, "seen");
     setIsVisible(true);
   }, []);
 
   if (!isVisible) return null;
 
-  const closeNotice = () => setIsVisible(false);
+  const closeNotice = () => {
+    safeLocalStorage().setItem(UPDATE_NOTICE_STORAGE_KEY, "seen");
+    setIsVisible(false);
+  };
 
   return (
     <div className={clsx("modal-mask", styles["update-notice-mask"])}>
@@ -33,15 +33,15 @@ export function UpdateNotice() {
         title="Open Chat 的智能和速度现已全面提升啦！"
         onClose={closeNotice}
         centered
-        showClose={false}
+        showClose
         showMaximize={false}
-        closeOnEscape={false}
+        closeOnEscape
         actions={[
           <IconButton
             key="confirm"
             className={styles["update-notice-action"]}
             type="primary"
-            text="好滴"
+            text="继续"
             onClick={closeNotice}
           />,
         ]}
@@ -58,7 +58,8 @@ export function UpdateNotice() {
             </p>
             <p>
               <strong>回复速度：</strong>
-              相比之前大幅提升约 <strong>3~4 倍</strong>，几秒钟即可一次性给出完整回复
+              相比之前大幅提升约 <strong>3~4 倍</strong>
+              ，几秒钟即可一次性给出完整回复
             </p>
           </div>
 

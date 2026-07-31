@@ -20,7 +20,7 @@
   @include container();
 }
 
-@media only screen and (min-width: 641px) {
+@media only screen and (min-width: 861px) {
   .tight-container {
     --window-width: 100vw;
     --window-height: var(--full-height);
@@ -113,7 +113,7 @@
   display: none;
 }
 
-@media only screen and (min-width: 641px) and (max-width: 1024px) {
+@media only screen and (min-width: 861px) and (max-width: 1024px) {
   .sidebar {
     padding: 14px;
   }
@@ -124,7 +124,7 @@
   }
 }
 
-@media only screen and (max-width: 640px) {
+@media only screen and (max-width: 860px) {
   .container {
     min-height: unset;
     min-width: unset;
@@ -319,20 +319,18 @@
 }
 
 .sidebar-title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.02em;
-  animation: slide-in var(--motion-normal) var(--ease-out);
 }
 
 .sidebar-sub-title {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.35;
   font-weight: 400;
   color: var(--text-secondary);
-  animation: slide-in var(--motion-normal) var(--ease-out);
 }
 
 .sidebar-body {
@@ -397,39 +395,25 @@
 }
 
 .chat-item-selected {
-  background-color: var(--surface-primary);
-  border-color: var(--separator);
-  box-shadow: var(--card-shadow);
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 10px;
-    bottom: 10px;
-    left: 5px;
-    width: 3px;
-    border-radius: 999px;
-    background: var(--primary);
-  }
+  background-color: var(--hover-color);
 }
 
 .chat-item-title {
-  font-size: 17px;
-  font-weight: bolder;
+  font-size: 16px;
+  font-weight: 550;
   display: block;
   width: calc(100% - 15px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  animation: slide-in ease 0.3s;
 }
 
 .chat-item-delete {
   position: absolute;
   top: 2px;
   right: 2px;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -457,8 +441,9 @@
   transform: translateX(-4px);
 }
 
-@media only screen and (max-width: 640px) {
-  .chat-item-delete {
+@media only screen and (max-width: 860px) {
+  .chat-item-wrapper-selected > .chat-item-delete,
+  .chat-item-delete:focus-visible {
     opacity: 0.55;
     transform: translateX(-4px);
   }
@@ -472,10 +457,9 @@
 .chat-item-info {
   display: flex;
   justify-content: space-between;
-  color: rgb(166, 166, 166);
-  font-size: 12px;
-  margin-top: 8px;
-  animation: slide-in ease 0.3s;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  margin-top: 6px;
 }
 
 .chat-item-count,
@@ -577,26 +561,26 @@
 }
 
 .sidebar .sidebar-primary-action {
-  --icon-button-text-size: 19px;
+  --icon-button-text-size: 16px;
 
-  min-width: 118px;
-  width: 118px;
+  min-width: 132px;
+  width: 132px;
   min-height: 48px;
   padding: 0 12px;
   border-radius: 999px;
-  background-color: #0a84ff;
-  color: #fff;
-  box-shadow: 0 8px 20px rgba(10, 132, 255, 0.24);
+  background-color: var(--action-primary);
+  color: var(--action-primary-foreground);
+  box-shadow: var(--control-shadow);
 
   > div:first-child {
-    width: 28px;
-    height: 28px;
-    flex: 0 0 28px;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
   }
 
   svg {
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
   }
 
   path {
@@ -606,7 +590,7 @@
 
   &:hover,
   &:focus-visible {
-    background-color: #0077ed;
+    background-color: var(--action-primary-hover);
   }
 }
 
@@ -614,19 +598,20 @@
   min-width: 48px;
   min-height: 48px;
   padding: 9px;
-  border-radius: 14px;
+  border-radius: 999px;
   color: var(--text-primary);
-  background-color: var(--surface-primary);
+  background-color: var(--control-material);
+  box-shadow: var(--control-shadow);
 
   > div:first-child {
-    width: 29px;
-    height: 29px;
-    flex: 0 0 29px;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
   }
 
   svg {
-    width: 29px;
-    height: 29px;
+    width: 22px;
+    height: 22px;
   }
 
   path {

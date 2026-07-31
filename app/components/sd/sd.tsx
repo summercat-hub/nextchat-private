@@ -44,7 +44,7 @@ function getSdTaskStatus(item: any) {
   switch (item.status) {
     case "success":
       s = Locale.Sd.Status.Success;
-      color = "green";
+      color = "blue";
       break;
     case "error":
       s = Locale.Sd.Status.Error;

@@ -13,7 +13,7 @@ import BrainIcon from "../icons/brain.svg";
 import RenameIcon from "../icons/rename.svg";
 import EditIcon from "../icons/rename.svg";
 import ExportIcon from "../icons/share.svg";
-import ReturnIcon from "../icons/return.svg";
+import SidebarIcon from "../icons/sidebar.svg";
 import CopyIcon from "../icons/copy.svg";
 import SpeakIcon from "../icons/speak.svg";
 import SpeakStopIcon from "../icons/speak-stop.svg";
@@ -26,7 +26,7 @@ import ReloadIcon from "../icons/reload.svg";
 import ConfirmIcon from "../icons/confirm.svg";
 import CloseIcon from "../icons/close.svg";
 import CancelIcon from "../icons/cancel.svg";
-import MenuIcon from "../icons/menu.svg";
+import MoreIcon from "../icons/more-horizontal.svg";
 
 import StopIcon from "../icons/pause.svg";
 import {
@@ -35,7 +35,6 @@ import {
   createMessage,
   DEFAULT_TOPIC,
   SubmitKey,
-  Theme,
   useAccessStore,
   useAppConfig,
   useChatStore,
@@ -126,50 +125,6 @@ function MenuUploadIcon() {
       <rect x="4.5" y="5.2" width="15" height="13.6" rx="2.8" />
       <circle cx="9" cy="10" r="1.55" />
       <path d="M6.8 17.1 11.1 12.8 14.3 15.9 16.1 14.1 19 17.1" />
-    </svg>
-  );
-}
-
-function MenuThemeIcon(props: { theme: Theme }) {
-  if (props.theme === Theme.Dark) {
-    return (
-      <svg
-        className={styles["chat-input-menu-glyph"]}
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M15.8 4.9a7.3 7.3 0 1 0 3.3 11.3 6.2 6.2 0 0 1-7.7-7.7 7.4 7.4 0 0 0 4.4-3.6Z" />
-      </svg>
-    );
-  }
-
-  if (props.theme === Theme.Light) {
-    return (
-      <svg
-        className={styles["chat-input-menu-glyph"]}
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <circle cx="12" cy="12" r="4.25" />
-        <path d="M12 3.6v2.05M12 18.35v2.05M3.6 12h2.05M18.35 12h2.05M6.05 6.05l1.45 1.45M16.5 16.5l1.45 1.45M17.95 6.05 16.5 7.5M7.5 16.5l-1.45 1.45" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg
-      className={styles["chat-input-menu-glyph"]}
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M5.4 14.7A7.2 7.2 0 0 1 17 6.5" />
-      <path d="M17 6.5h-3.1M17 6.5v-3.1" />
-      <path d="M18.6 9.3A7.2 7.2 0 0 1 7 17.5" />
-      <path d="M7 17.5h3.1M7 17.5v3.1" />
-      <path d="M9.2 14.5 12 8.7l2.8 5.8M10.2 12.6h3.6" />
     </svg>
   );
 }
@@ -634,6 +589,8 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
   const session = chatStore.currentSession();
   const selectorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const currentModel = session.mask.modelConfig.model;
   const currentReasoningEffort =
     session.mask.modelConfig.reasoning_effort ?? "none";
@@ -666,6 +623,49 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
       document.removeEventListener("pointerdown", closeWhenClickingOutside);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const frame = window.requestAnimationFrame(() => {
+      menuRef.current
+        ?.querySelector<HTMLButtonElement>('[aria-checked="true"]')
+        ?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open]);
+
+  const handleMenuKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus({ preventScroll: true });
+      return;
+    }
+
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+      return;
+    }
+
+    const options = Array.from(
+      menuRef.current?.querySelectorAll<HTMLButtonElement>(
+        '[role="menuitemradio"]:not(:disabled)',
+      ) ?? [],
+    );
+    if (!options.length) return;
+    event.preventDefault();
+    const currentIndex = options.indexOf(
+      document.activeElement as HTMLButtonElement,
+    );
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+        ? options.length - 1
+        : event.key === "ArrowDown"
+        ? (Math.max(currentIndex, -1) + 1) % options.length
+        : (currentIndex <= 0 ? options.length : currentIndex) - 1;
+    options[nextIndex]?.focus({ preventScroll: true });
+  };
+
   if (!props.visible) return null;
 
   return (
@@ -678,6 +678,7 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
         )}
       >
         <button
+          ref={triggerRef}
           type="button"
           className={styles["chat-intelligence-trigger"]}
           aria-label={`智能程度：${currentLabel}`}
@@ -686,6 +687,12 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
           disabled={props.disabled}
           onPointerDown={(event) => event.preventDefault()}
           onClick={() => setOpen((value) => !value)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              event.preventDefault();
+              setOpen(true);
+            }
+          }}
         >
           <span>{currentLabel}</span>
           <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
@@ -694,7 +701,12 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
         </button>
 
         {open && (
-          <div className={styles["chat-intelligence-menu"]} role="menu">
+          <div
+            ref={menuRef}
+            className={styles["chat-intelligence-menu"]}
+            role="menu"
+            onKeyDown={handleMenuKeyDown}
+          >
             <div className={styles["chat-intelligence-title"]}>智能</div>
             {INTELLIGENCE_OPTIONS.map((option) => {
               const selected = option.id === currentLevel;
@@ -766,7 +778,6 @@ export function ChatActions(props: {
   const config = useAppConfig();
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
-  const theme = config.theme;
   const currentModel = session.mask.modelConfig.model;
   const allModels = useAllModels();
   const models = useMemo(() => {
@@ -784,13 +795,21 @@ export function ChatActions(props: {
   }, [allModels]);
   const [showUploadImage, setShowUploadImage] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const plusRef = useRef<HTMLButtonElement>(null);
+  const keyboardMenuOpen = useRef(false);
   const [menuState, setMenuState] = useState<
     "closed" | "opening" | "open" | "closing"
   >("closed");
   const menuMounted = menuState !== "closed";
-  const menuExpanded = menuState === "open";
+  const menuExpanded = menuState === "opening" || menuState === "open";
 
   const closeMenu = useCallback(() => {
+    if (
+      menuRef.current?.contains(document.activeElement) &&
+      document.activeElement !== plusRef.current
+    ) {
+      plusRef.current?.focus({ preventScroll: true });
+    }
     setMenuState((state) => {
       if (state === "closed" || state === "closing") return state;
       return "closing";
@@ -798,7 +817,9 @@ export function ChatActions(props: {
   }, []);
 
   const openMenu = useCallback(() => {
-    setMenuState((state) => (state === "closed" ? "opening" : state));
+    setMenuState((state) =>
+      state === "closed" || state === "closing" ? "opening" : state,
+    );
   }, []);
 
   useEffect(() => {
@@ -809,6 +830,14 @@ export function ChatActions(props: {
     });
 
     return () => window.cancelAnimationFrame(frame);
+  }, [menuState]);
+
+  useEffect(() => {
+    if (menuState !== "open" || !keyboardMenuOpen.current) return;
+    keyboardMenuOpen.current = false;
+    menuRef.current
+      ?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')
+      ?.focus({ preventScroll: true });
   }, [menuState]);
 
   useEffect(() => {
@@ -860,14 +889,6 @@ export function ChatActions(props: {
     if (voiceActive) setMenuState("closed");
   }, [voiceActive]);
 
-  function nextTheme() {
-    const themes = [Theme.Auto, Theme.Light, Theme.Dark];
-    const themeIndex = themes.indexOf(theme);
-    const nextIndex = (themeIndex + 1) % themes.length;
-    const nextTheme = themes[nextIndex];
-    config.update((config) => (config.theme = nextTheme));
-  }
-
   useEffect(() => {
     const show =
       isVisionModel(currentModel) || /gemini-3\./i.test(currentModel);
@@ -898,6 +919,7 @@ export function ChatActions(props: {
 
   return (
     <div
+      ref={menuRef}
       className={clsx(
         styles["chat-input-actions"],
         menuMounted && styles["chat-input-actions-open"],
@@ -905,20 +927,58 @@ export function ChatActions(props: {
         inputFocused && styles["chat-input-actions-focused"],
         voiceActive && styles["chat-input-actions-recording"],
       )}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && menuMounted) {
+          event.preventDefault();
+          closeMenu();
+          plusRef.current?.focus({ preventScroll: true });
+          return;
+        }
+        if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+          return;
+        }
+        const items = Array.from(
+          menuRef.current?.querySelectorAll<HTMLButtonElement>(
+            '[role="menuitem"]:not(:disabled)',
+          ) ?? [],
+        );
+        if (!items.length) return;
+        event.preventDefault();
+        const currentIndex = items.indexOf(
+          document.activeElement as HTMLButtonElement,
+        );
+        const nextIndex =
+          event.key === "Home"
+            ? 0
+            : event.key === "End"
+            ? items.length - 1
+            : event.key === "ArrowDown"
+            ? (Math.max(currentIndex, -1) + 1) % items.length
+            : (currentIndex <= 0 ? items.length : currentIndex) - 1;
+        items[nextIndex]?.focus({ preventScroll: true });
+      }}
     >
       <button
+        ref={plusRef}
         type="button"
         className={styles["chat-input-plus"]}
         data-testid="chat-input-plus"
-        aria-label={voiceActive ? "取消录音" : Locale.UI.Config}
+        aria-label={
+          voiceActive ? "取消录音" : menuMounted ? "关闭更多工具" : "更多工具"
+        }
         aria-expanded={voiceActive ? false : menuExpanded}
-        disabled={!voiceActive && menuMounted}
         onPointerDown={(event) => event.preventDefault()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            keyboardMenuOpen.current = !menuMounted;
+          }
+        }}
         onClick={() => {
           if (voiceActive) {
             onCancelVoice();
           } else {
-            openMenu();
+            if (menuMounted) closeMenu();
+            else openMenu();
           }
         }}
       >
@@ -933,7 +993,6 @@ export function ChatActions(props: {
 
       {menuMounted && (
         <div
-          ref={menuRef}
           className={clsx(
             styles["chat-input-menu"],
             menuState === "open" && styles["chat-input-menu-open"],
@@ -942,33 +1001,19 @@ export function ChatActions(props: {
           role="menu"
           aria-hidden={menuState === "closing"}
         >
-          <button
-            type="button"
-            className={clsx(
-              styles["chat-input-menu-item"],
-              !showUploadImage && styles["chat-input-menu-item-disabled"],
-            )}
-            role="menuitem"
-            aria-disabled={!showUploadImage}
-            disabled={!showUploadImage}
-            onClick={() => runMenuAction(uploadImage)}
-          >
-            <span className={styles["chat-input-menu-icon"]}>
-              {uploading ? <LoadingButtonIcon /> : <MenuUploadIcon />}
-            </span>
-            <span>{Locale.Chat.InputActions.UploadImage}</span>
-          </button>
-          <button
-            type="button"
-            className={styles["chat-input-menu-item"]}
-            role="menuitem"
-            onClick={() => runMenuAction(nextTheme)}
-          >
-            <span className={styles["chat-input-menu-icon"]}>
-              <MenuThemeIcon theme={theme} />
-            </span>
-            <span>{Locale.Chat.InputActions.Theme[theme]}</span>
-          </button>
+          {showUploadImage && (
+            <button
+              type="button"
+              className={styles["chat-input-menu-item"]}
+              role="menuitem"
+              onClick={() => runMenuAction(uploadImage)}
+            >
+              <span className={styles["chat-input-menu-icon"]}>
+                {uploading ? <LoadingButtonIcon /> : <MenuUploadIcon />}
+              </span>
+              <span>{Locale.Chat.InputActions.UploadImage}</span>
+            </button>
+          )}
           <button
             type="button"
             className={styles["chat-input-menu-item"]}
@@ -2144,7 +2189,7 @@ function _Chat() {
 
   const [showChatSidePanel, setShowChatSidePanel] = useState(false);
   const displayTopic =
-    session.topic && session.topic !== DEFAULT_TOPIC ? session.topic : "";
+    session.topic && session.topic !== DEFAULT_TOPIC ? session.topic : "新对话";
 
   return (
     <>
@@ -2157,7 +2202,7 @@ function _Chat() {
             <div className="window-actions">
               <div className={"window-action-button"}>
                 <IconButton
-                  icon={<ReturnIcon />}
+                  icon={<SidebarIcon />}
                   className={styles["chat-header-icon-button"]}
                   title={Locale.Chat.Actions.ChatList}
                   aria={Locale.Chat.Actions.ChatList}
@@ -2174,20 +2219,15 @@ function _Chat() {
           <div
             className={clsx("window-header-title", styles["chat-body-title"])}
           >
-            {displayTopic && (
-              <button
-                type="button"
-                className={clsx(
-                  "window-header-main-title",
-                  styles["chat-body-main-title"],
-                )}
-                title={Locale.Chat.Rename}
-                aria-label={Locale.Chat.Rename}
-                onClick={() => setIsEditingMessage(true)}
-              >
-                {displayTopic}
-              </button>
-            )}
+            <div
+              className={clsx(
+                "window-header-main-title",
+                styles["chat-body-main-title"],
+              )}
+              title={displayTopic}
+            >
+              {displayTopic}
+            </div>
           </div>
           <div className="window-actions">
             <div className="window-action-button">
@@ -2196,11 +2236,12 @@ function _Chat() {
                 onClose={() => setShowHeaderMenu(false)}
                 contentClassName={styles["chat-header-popover-content"]}
                 maskClassName={styles["chat-header-popover-mask"]}
-                contentRole="group"
+                contentRole="menu"
                 ariaLabel="会话操作"
                 content={
                   <div className={styles["chat-header-menu"]}>
                     <IconButton
+                      role="menuitem"
                       icon={<ReloadIcon />}
                       text={Locale.Chat.Actions.RefreshTitle}
                       className={styles["chat-header-menu-item"]}
@@ -2211,6 +2252,7 @@ function _Chat() {
                       }}
                     />
                     <IconButton
+                      role="menuitem"
                       icon={<RenameIcon />}
                       text={Locale.Chat.Rename}
                       className={styles["chat-header-menu-item"]}
@@ -2220,6 +2262,7 @@ function _Chat() {
                       }}
                     />
                     <IconButton
+                      role="menuitem"
                       icon={<ExportIcon />}
                       text={Locale.Chat.Actions.Export}
                       className={styles["chat-header-menu-item"]}
@@ -2230,6 +2273,7 @@ function _Chat() {
                     />
                     {showMaxIcon && (
                       <IconButton
+                        role="menuitem"
                         icon={config.tightBorder ? <MinIcon /> : <MaxIcon />}
                         text={Locale.Chat.Actions.FullScreen}
                         className={styles["chat-header-menu-item"]}
@@ -2246,7 +2290,7 @@ function _Chat() {
                 }
               >
                 <IconButton
-                  icon={<MenuIcon />}
+                  icon={<MoreIcon />}
                   className={styles["chat-header-icon-button"]}
                   title="更多操作"
                   aria="更多操作"
@@ -2269,6 +2313,11 @@ function _Chat() {
             <div
               className={styles["chat-body"]}
               data-chat-scroll-body=""
+              role="log"
+              aria-label="对话消息"
+              aria-live="polite"
+              aria-relevant="additions text"
+              aria-busy={isLoading}
               ref={scrollRef}
               onScroll={(e) => onChatBodyScroll(e.currentTarget)}
               onMouseDown={() => inputRef.current?.blur()}
@@ -2466,7 +2515,6 @@ function _Chat() {
                                 </div>
                               </div>
                             )}
-
                           </div>
                         </div>
                         {shouldShowClearContextDivider && (
@@ -2497,14 +2545,20 @@ function _Chat() {
                 visible={inputExpanded}
                 disabled={isLoading || isVoiceActive}
               />
-              <label
+              <div
                 className={clsx(styles["chat-input-panel-inner"], {
                   [styles["chat-input-panel-inner-expanded"]]: inputExpanded,
                   [styles["chat-input-panel-inner-attach"]]:
                     attachImages.length !== 0 && !isVoiceActive,
                   [styles["chat-input-panel-inner-recording"]]: isVoiceActive,
                 })}
-                htmlFor="chat-input"
+                role="group"
+                aria-label="消息输入"
+                onPointerDown={(event) => {
+                  if (event.target === event.currentTarget) {
+                    inputRef.current?.focus();
+                  }
+                }}
               >
                 {attachImages.length !== 0 && !isVoiceActive && (
                   <div
@@ -2540,6 +2594,7 @@ function _Chat() {
                 {!isVoiceActive ? (
                   <textarea
                     id="chat-input"
+                    aria-label="消息"
                     ref={inputRef}
                     className={styles["chat-input"]}
                     placeholder={Locale.Chat.Input(submitKey)}
@@ -2648,7 +2703,7 @@ function _Chat() {
                     <path d="M5.4 9.5 10 4.9l4.6 4.6" />
                   </svg>
                 </button>
-              </label>
+              </div>
             </div>
           </div>
           <div

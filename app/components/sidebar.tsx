@@ -137,16 +137,31 @@ export function SideBarContainer(props: {
   onMobileDismiss?: () => void;
   shouldNarrow: boolean;
   className?: string;
+  mobileOpen?: boolean;
 }) {
   const isMobileScreen = useMobileScreen();
-  const { children, className, onDragStart, onMobileDismiss, shouldNarrow } =
-    props;
+  const config = useAppConfig();
+  const {
+    children,
+    className,
+    mobileOpen,
+    onDragStart,
+    onMobileDismiss,
+    shouldNarrow,
+  } = props;
 
   return (
     <div
       className={clsx(styles.sidebar, className, {
         [styles["narrow-sidebar"]]: shouldNarrow,
       })}
+      role={isMobileScreen ? "dialog" : "navigation"}
+      aria-modal={isMobileScreen && mobileOpen ? "true" : undefined}
+      aria-label="对话列表"
+      aria-hidden={isMobileScreen && !mobileOpen ? "true" : undefined}
+      {...((isMobileScreen && !mobileOpen ? { inert: "" } : {}) as any)}
+      tabIndex={isMobileScreen ? -1 : undefined}
+      data-mobile-sidebar=""
       onClick={(event) => {
         if (!isMobileScreen) return;
 
@@ -164,7 +179,39 @@ export function SideBarContainer(props: {
       {children}
       <div
         className={styles["sidebar-drag"]}
+        role={isMobileScreen ? undefined : "separator"}
+        aria-orientation={isMobileScreen ? undefined : "vertical"}
+        aria-label={isMobileScreen ? undefined : "调整侧栏宽度"}
+        aria-valuemin={isMobileScreen ? undefined : MIN_SIDEBAR_WIDTH}
+        aria-valuemax={isMobileScreen ? undefined : MAX_SIDEBAR_WIDTH}
+        aria-valuenow={isMobileScreen ? undefined : config.sidebarWidth}
+        tabIndex={isMobileScreen ? -1 : 0}
         onPointerDown={(e) => onDragStart(e as any)}
+        onKeyDown={(event) => {
+          if (isMobileScreen) return;
+          const step = event.shiftKey ? 24 : 8;
+          const direction = event.key === "ArrowLeft" ? -1 : 1;
+
+          if (event.key === "Home") {
+            event.preventDefault();
+            config.update((value) => (value.sidebarWidth = MIN_SIDEBAR_WIDTH));
+          } else if (event.key === "End") {
+            event.preventDefault();
+            config.update((value) => (value.sidebarWidth = MAX_SIDEBAR_WIDTH));
+          } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            config.update(
+              (value) =>
+                (value.sidebarWidth = Math.min(
+                  MAX_SIDEBAR_WIDTH,
+                  Math.max(
+                    MIN_SIDEBAR_WIDTH,
+                    value.sidebarWidth + direction * step,
+                  ),
+                )),
+            );
+          }
+        }}
       >
         <DragIcon />
       </div>
@@ -244,6 +291,7 @@ export function SideBarTail(props: {
 export function SideBar(props: {
   className?: string;
   onMobileDismiss?: () => void;
+  mobileOpen?: boolean;
 }) {
   useHotKey();
   const { onDragStart, shouldNarrow } = useDragSideBar();
@@ -296,7 +344,7 @@ export function SideBar(props: {
         primaryAction={
           <IconButton
             icon={<ComposeIcon />}
-            text={shouldNarrow ? undefined : "聊天"}
+            text={shouldNarrow ? undefined : "新建聊天"}
             className={styles["sidebar-primary-action"]}
             onClick={() => {
               chatStore.newSession();

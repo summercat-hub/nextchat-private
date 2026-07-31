@@ -5,11 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { Path } from "../constant";
 import { useAccessStore } from "../store";
 import Locale from "../locales";
-import BotIcon from "../icons/bot.svg";
 import { getClientConfig } from "../config/client";
 import { PasswordInput } from "./ui-lib";
 import LeftIcon from "@/app/icons/left.svg";
-import clsx from "clsx";
 
 export function AuthPage() {
   const navigate = useNavigate();
@@ -32,66 +30,69 @@ export function AuthPage() {
           onClick={() => navigate(Path.Home)}
         ></IconButton>
       </div>
-      <div className={clsx("no-dark", styles["auth-logo"])}>
-        <BotIcon />
-      </div>
+      <main className={styles["auth-content"]}>
+        <div className={styles["auth-brand"]} aria-hidden="true">
+          O
+        </div>
+        <h1 className={styles["auth-title"]}>{Locale.Auth.Title}</h1>
+        <p className={styles["auth-tips"]}>{Locale.Auth.Tips}</p>
 
-      <div className={styles["auth-title"]}>{Locale.Auth.Title}</div>
-      <div className={styles["auth-tips"]}>{Locale.Auth.Tips}</div>
-
-      <PasswordInput
-        style={{ marginTop: "3vh", marginBottom: "3vh" }}
-        aria={Locale.Settings.ShowPassword}
-        aria-label={Locale.Auth.Input}
-        value={accessStore.accessCode}
-        type="text"
-        placeholder={Locale.Auth.Input}
-        onChange={(e) => {
-          accessStore.update(
-            (access) => (access.accessCode = e.currentTarget.value),
-          );
-        }}
-      />
-
-      {!accessStore.hideUserApiKey ? (
-        <>
-          <div className={styles["auth-tips"]}>{Locale.Auth.SubTips}</div>
+        <div className={styles["auth-field"]}>
           <PasswordInput
-            style={{ marginTop: "3vh", marginBottom: "3vh" }}
             aria={Locale.Settings.ShowPassword}
-            aria-label={Locale.Settings.Access.OpenAI.ApiKey.Placeholder}
-            value={accessStore.openaiApiKey}
-            type="text"
-            placeholder={Locale.Settings.Access.OpenAI.ApiKey.Placeholder}
+            aria-label={Locale.Auth.Input}
+            value={accessStore.accessCode}
+            placeholder={Locale.Auth.Input}
             onChange={(e) => {
               accessStore.update(
-                (access) => (access.openaiApiKey = e.currentTarget.value),
+                (access) => (access.accessCode = e.currentTarget.value),
               );
             }}
-          />
-          <PasswordInput
-            style={{ marginTop: "3vh", marginBottom: "3vh" }}
-            aria={Locale.Settings.ShowPassword}
-            aria-label={Locale.Settings.Access.Google.ApiKey.Placeholder}
-            value={accessStore.googleApiKey}
-            type="text"
-            placeholder={Locale.Settings.Access.Google.ApiKey.Placeholder}
-            onChange={(e) => {
-              accessStore.update(
-                (access) => (access.googleApiKey = e.currentTarget.value),
-              );
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && accessStore.accessCode.trim()) {
+                goChat();
+              }
             }}
           />
-        </>
-      ) : null}
+        </div>
 
-      <div className={styles["auth-actions"]}>
+        {!accessStore.hideUserApiKey ? (
+          <details className={styles["auth-advanced"]}>
+            <summary>高级选项</summary>
+            <PasswordInput
+              aria={Locale.Settings.ShowPassword}
+              aria-label={Locale.Settings.Access.OpenAI.ApiKey.Placeholder}
+              value={accessStore.openaiApiKey}
+              placeholder={Locale.Settings.Access.OpenAI.ApiKey.Placeholder}
+              onChange={(e) => {
+                accessStore.update(
+                  (access) => (access.openaiApiKey = e.currentTarget.value),
+                );
+              }}
+            />
+            <PasswordInput
+              aria={Locale.Settings.ShowPassword}
+              aria-label={Locale.Settings.Access.Google.ApiKey.Placeholder}
+              value={accessStore.googleApiKey}
+              placeholder={Locale.Settings.Access.Google.ApiKey.Placeholder}
+              onChange={(e) => {
+                accessStore.update(
+                  (access) => (access.googleApiKey = e.currentTarget.value),
+                );
+              }}
+            />
+          </details>
+        ) : null}
+
         <IconButton
+          className={styles["auth-submit"]}
           text={Locale.Auth.Confirm}
           type="primary"
+          disabled={!accessStore.accessCode.trim()}
           onClick={goChat}
         />
-      </div>
+        <p className={styles["auth-privacy"]}>密码仅用于验证访问权限。</p>
+      </main>
     </div>
   );
 }

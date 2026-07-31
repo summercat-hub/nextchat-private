@@ -8,7 +8,6 @@ import CloseIcon from "../icons/close.svg";
 import LoadingIcon from "../icons/three-dots.svg";
 import DownloadIcon from "../icons/download.svg";
 import UploadIcon from "../icons/upload.svg";
-import ConfigIcon from "../icons/config.svg";
 import ConfirmIcon from "../icons/confirm.svg";
 
 import ConnectionIcon from "../icons/connection.svg";
@@ -161,6 +160,7 @@ function CheckButton() {
 
 function SyncConfigModal(props: { onClose?: () => void }) {
   const syncStore = useSyncStore();
+  const couldSync = !!syncStore.cloudSync();
 
   return (
     <div className="modal-mask">
@@ -169,6 +169,21 @@ function SyncConfigModal(props: { onClose?: () => void }) {
         onClose={() => props.onClose?.()}
         actions={[
           <CheckButton key="check" />,
+          couldSync ? (
+            <IconButton
+              key="sync"
+              text={Locale.UI.Sync}
+              onClick={async () => {
+                try {
+                  await syncStore.sync();
+                  showToast(Locale.Settings.Sync.Success);
+                } catch (error) {
+                  console.error("[Sync]", error);
+                  showToast(Locale.Settings.Sync.Fail);
+                }
+              }}
+            />
+          ) : null,
           <IconButton
             key="confirm"
             onClick={props.onClose}
@@ -176,7 +191,7 @@ function SyncConfigModal(props: { onClose?: () => void }) {
             bordered
             text={Locale.UI.Confirm}
           />,
-        ]}
+        ].filter(Boolean)}
       >
         <List>
           <ListItem
@@ -205,6 +220,7 @@ function SyncConfigModal(props: { onClose?: () => void }) {
             subTitle={Locale.Settings.Sync.Config.Proxy.SubTitle}
           >
             <input
+              aria-label={Locale.Settings.Sync.Config.Proxy.Title}
               type="checkbox"
               checked={syncStore.useProxy}
               onChange={(e) => {
@@ -320,15 +336,45 @@ function SyncConfigModal(props: { onClose?: () => void }) {
   );
 }
 
+function LocalDataModal(props: { overview: string; onClose: () => void }) {
+  const syncStore = useSyncStore();
+
+  return (
+    <div className="modal-mask">
+      <Modal
+        title={Locale.Settings.Sync.LocalState}
+        onClose={props.onClose}
+        showMaximize={false}
+        actions={[
+          <IconButton
+            key="export"
+            icon={<UploadIcon />}
+            text={Locale.UI.Export}
+            onClick={() => syncStore.export()}
+          />,
+          <IconButton
+            key="import"
+            icon={<DownloadIcon />}
+            text={Locale.UI.Import}
+            onClick={() => syncStore.import()}
+          />,
+        ]}
+      >
+        <p className={styles["settings-modal-description"]}>
+          {props.overview}。导出可用于备份或迁移，导入会从已有备份恢复数据。
+        </p>
+      </Modal>
+    </div>
+  );
+}
+
 function SyncItems() {
   const syncStore = useSyncStore();
   const chatStore = useChatStore();
   const promptStore = usePromptStore();
-  const couldSync = useMemo(() => {
-    return syncStore.cloudSync();
-  }, [syncStore]);
 
   const [showSyncConfigModal, setShowSyncConfigModal] = useState(false);
+  const [showLocalDataModal, setShowLocalDataModal] = useState(false);
 
   const stateOverview = useMemo(() => {
     const sessions = chatStore.sessions;
@@ -353,69 +399,38 @@ function SyncItems() {
                 }]`
               : Locale.Settings.Sync.NotSyncYet
           }
+          onClick={() => setShowSyncConfigModal(true)}
         >
-          <div style={{ display: "flex" }}>
-            <IconButton
-              aria={Locale.Settings.Sync.CloudState + Locale.UI.Config}
-              icon={<ConfigIcon />}
-              text={Locale.UI.Config}
-              onClick={() => {
-                setShowSyncConfigModal(true);
-              }}
-            />
-            {couldSync && (
-              <IconButton
-                icon={<ResetIcon />}
-                text={Locale.UI.Sync}
-                onClick={async () => {
-                  try {
-                    await syncStore.sync();
-                    showToast(Locale.Settings.Sync.Success);
-                  } catch (e) {
-                    showToast(Locale.Settings.Sync.Fail);
-                    console.error("[Sync]", e);
-                  }
-                }}
-              />
-            )}
-          </div>
+          <span className={styles["settings-disclosure"]} aria-hidden="true">
+            ›
+          </span>
         </ListItem>
 
         <ListItem
           title={Locale.Settings.Sync.LocalState}
           subTitle={Locale.Settings.Sync.Overview(stateOverview)}
+          onClick={() => setShowLocalDataModal(true)}
         >
-          <div style={{ display: "flex" }}>
-            <IconButton
-              aria={Locale.Settings.Sync.LocalState + Locale.UI.Export}
-              icon={<UploadIcon />}
-              text={Locale.UI.Export}
-              onClick={() => {
-                syncStore.export();
-              }}
-            />
-            <IconButton
-              aria={Locale.Settings.Sync.LocalState + Locale.UI.Import}
-              icon={<DownloadIcon />}
-              text={Locale.UI.Import}
-              onClick={() => {
-                syncStore.import();
-              }}
-            />
-          </div>
+          <span className={styles["settings-disclosure"]} aria-hidden="true">
+            ›
+          </span>
         </ListItem>
       </List>
 
       {showSyncConfigModal && (
         <SyncConfigModal onClose={() => setShowSyncConfigModal(false)} />
       )}
+      {showLocalDataModal && (
+        <LocalDataModal
+          overview={Locale.Settings.Sync.Overview(stateOverview)}
+          onClose={() => setShowLocalDataModal(false)}
+        />
+      )}
     </>
   );
 }
 
-export function Settings(
-  props: { presentation?: "page" | "sheet" } = {},
-) {
+export function Settings(props: { presentation?: "page" | "sheet" } = {}) {
   const navigate = useNavigate();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const config = useAppConfig();
@@ -1307,6 +1322,8 @@ export function Settings(
 
   const settingsContent = (
     <div className={styles["settings"]}>
+      <section className={styles["settings-section"]}>
+        <h2 className={styles["settings-section-title"]}>外观</h2>
         <List>
           {showLegacySettings && (
             <>
@@ -1411,6 +1428,36 @@ export function Settings(
             </>
           )}
 
+          <ListItem title="主题" subTitle="选择界面的明暗外观">
+            <div
+              className={styles["theme-selector"]}
+              role="group"
+              aria-label="主题"
+            >
+              {[
+                [Theme.Auto, "自动"],
+                [Theme.Light, "浅色"],
+                [Theme.Dark, "深色"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={config.theme === value}
+                  className={
+                    config.theme === value
+                      ? styles["theme-option-selected"]
+                      : undefined
+                  }
+                  onClick={() =>
+                    updateConfig((config) => (config.theme = value as Theme))
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </ListItem>
+
           <ListItem title={Locale.Settings.Lang.Name}>
             <Select
               aria-label={Locale.Settings.Lang.Name}
@@ -1441,14 +1488,17 @@ export function Settings(
               onChange={(e) =>
                 updateConfig(
                   (config) =>
-                    (config.fontSize = Number.parseInt(
-                      e.currentTarget.value,
-                    )),
+                    (config.fontSize = Number.parseInt(e.currentTarget.value)),
                 )
               }
             ></InputRange>
           </ListItem>
+        </List>
+      </section>
 
+      <section className={styles["settings-section"]}>
+        <h2 className={styles["settings-section-title"]}>对话</h2>
+        <List>
           {showLegacySettings && (
             <ListItem
               title={Locale.Settings.FontFamily.Title}
@@ -1540,135 +1590,154 @@ export function Settings(
             </>
           )}
         </List>
+      </section>
 
-        {accessCodeComponent && <List>{accessCodeComponent}</List>}
+      {accessCodeComponent && (
+        <section className={styles["settings-section"]}>
+          <h2 className={styles["settings-section-title"]}>安全与隐私</h2>
+          <List>{accessCodeComponent}</List>
+        </section>
+      )}
 
+      <section className={styles["settings-section"]}>
+        <h2 className={styles["settings-section-title"]}>数据与同步</h2>
         <SyncItems />
+      </section>
 
-        {showLegacySettings && (
-          <details className={styles["advanced-settings"]}>
-            <summary className={styles["advanced-settings-summary"]}>
-              高级设置
-            </summary>
-            <div className={styles["advanced-settings-content"]}>
-              <List id={SlotID.CustomModel}>
-                {!accessStore.hideUserApiKey && (
-                  <>
-                    {useCustomConfigComponent}
+      {showLegacySettings && (
+        <details className={styles["advanced-settings"]}>
+          <summary className={styles["advanced-settings-summary"]}>
+            高级设置
+          </summary>
+          <div className={styles["advanced-settings-content"]}>
+            <List id={SlotID.CustomModel}>
+              {!accessStore.hideUserApiKey && (
+                <>
+                  {useCustomConfigComponent}
 
-                    {accessStore.useCustomConfig && (
-                      <>
-                        <ListItem
-                          title={Locale.Settings.Access.Provider.Title}
-                          subTitle={Locale.Settings.Access.Provider.SubTitle}
+                  {accessStore.useCustomConfig && (
+                    <>
+                      <ListItem
+                        title={Locale.Settings.Access.Provider.Title}
+                        subTitle={Locale.Settings.Access.Provider.SubTitle}
+                      >
+                        <Select
+                          aria-label={Locale.Settings.Access.Provider.Title}
+                          value={accessStore.provider}
+                          onChange={(e) => {
+                            accessStore.update(
+                              (access) =>
+                                (access.provider = e.target
+                                  .value as ServiceProvider),
+                            );
+                          }}
                         >
-                          <Select
-                            aria-label={Locale.Settings.Access.Provider.Title}
-                            value={accessStore.provider}
-                            onChange={(e) => {
-                              accessStore.update(
-                                (access) =>
-                                  (access.provider = e.target
-                                    .value as ServiceProvider),
-                              );
-                            }}
-                          >
-                            {Object.entries(ServiceProvider).map(([k, v]) => (
-                              <option value={v} key={k}>
-                                {k}
-                              </option>
-                            ))}
-                          </Select>
-                        </ListItem>
+                          {Object.entries(ServiceProvider).map(([k, v]) => (
+                            <option value={v} key={k}>
+                              {k}
+                            </option>
+                          ))}
+                        </Select>
+                      </ListItem>
 
-                        {openAIConfigComponent}
-                        {azureConfigComponent}
-                        {googleConfigComponent}
-                        {anthropicConfigComponent}
-                        {baiduConfigComponent}
-                        {byteDanceConfigComponent}
-                        {alibabaConfigComponent}
-                        {tencentConfigComponent}
-                        {moonshotConfigComponent}
-                        {deepseekConfigComponent}
-                        {stabilityConfigComponent}
-                        {lflytekConfigComponent}
-                        {XAIConfigComponent}
-                        {chatglmConfigComponent}
-                        {siliconflowConfigComponent}
-                        {ai302ConfigComponent}
-                      </>
-                    )}
-                  </>
-                )}
+                      {openAIConfigComponent}
+                      {azureConfigComponent}
+                      {googleConfigComponent}
+                      {anthropicConfigComponent}
+                      {baiduConfigComponent}
+                      {byteDanceConfigComponent}
+                      {alibabaConfigComponent}
+                      {tencentConfigComponent}
+                      {moonshotConfigComponent}
+                      {deepseekConfigComponent}
+                      {stabilityConfigComponent}
+                      {lflytekConfigComponent}
+                      {XAIConfigComponent}
+                      {chatglmConfigComponent}
+                      {siliconflowConfigComponent}
+                      {ai302ConfigComponent}
+                    </>
+                  )}
+                </>
+              )}
 
-                {!shouldHideBalanceQuery && !clientConfig?.isApp ? (
-                  <ListItem
-                    title={Locale.Settings.Usage.Title}
-                    subTitle={
-                      showUsage
-                        ? loadingUsage
-                          ? Locale.Settings.Usage.IsChecking
-                          : Locale.Settings.Usage.SubTitle(
-                              usage?.used ?? "[?]",
-                              usage?.subscription ?? "[?]",
-                            )
-                        : Locale.Settings.Usage.NoAccess
-                    }
-                  >
-                    {!showUsage || loadingUsage ? (
-                      <div />
-                    ) : (
-                      <IconButton
-                        icon={<ResetIcon></ResetIcon>}
-                        text={Locale.Settings.Usage.Check}
-                        onClick={() => checkUsage(true)}
-                      />
-                    )}
-                  </ListItem>
-                ) : null}
-
+              {!shouldHideBalanceQuery && !clientConfig?.isApp ? (
                 <ListItem
-                  title={Locale.Settings.Access.CustomModel.Title}
-                  subTitle={Locale.Settings.Access.CustomModel.SubTitle}
-                  vertical={true}
+                  title={Locale.Settings.Usage.Title}
+                  subTitle={
+                    showUsage
+                      ? loadingUsage
+                        ? Locale.Settings.Usage.IsChecking
+                        : Locale.Settings.Usage.SubTitle(
+                            usage?.used ?? "[?]",
+                            usage?.subscription ?? "[?]",
+                          )
+                      : Locale.Settings.Usage.NoAccess
+                  }
                 >
-                  <input
-                    aria-label={Locale.Settings.Access.CustomModel.Title}
-                    style={{
-                      width: "100%",
-                      maxWidth: "unset",
-                      textAlign: "left",
-                    }}
-                    type="text"
-                    value={config.customModels}
-                    placeholder="model1,model2,model3"
-                    onChange={(e) =>
-                      config.update(
-                        (config) =>
-                          (config.customModels = e.currentTarget.value),
-                      )
-                    }
-                  ></input>
+                  {!showUsage || loadingUsage ? (
+                    <div />
+                  ) : (
+                    <IconButton
+                      icon={<ResetIcon></ResetIcon>}
+                      text={Locale.Settings.Usage.Check}
+                      onClick={() => checkUsage(true)}
+                    />
+                  )}
                 </ListItem>
-              </List>
+              ) : null}
 
-              <List>
-                <RealtimeConfigList
-                  realtimeConfig={config.realtimeConfig}
-                  updateConfig={(updater) => {
-                    const realtimeConfig = { ...config.realtimeConfig };
-                    updater(realtimeConfig);
-                    config.update(
-                      (config) => (config.realtimeConfig = realtimeConfig),
-                    );
+              <ListItem
+                title={Locale.Settings.Access.CustomModel.Title}
+                subTitle={Locale.Settings.Access.CustomModel.SubTitle}
+                vertical={true}
+              >
+                <input
+                  aria-label={Locale.Settings.Access.CustomModel.Title}
+                  style={{
+                    width: "100%",
+                    maxWidth: "unset",
+                    textAlign: "left",
                   }}
-                />
-              </List>
-            </div>
-          </details>
-        )}
+                  type="text"
+                  value={config.customModels}
+                  placeholder="model1,model2,model3"
+                  onChange={(e) =>
+                    config.update(
+                      (config) => (config.customModels = e.currentTarget.value),
+                    )
+                  }
+                ></input>
+              </ListItem>
+            </List>
+
+            <List>
+              <RealtimeConfigList
+                realtimeConfig={config.realtimeConfig}
+                updateConfig={(updater) => {
+                  const realtimeConfig = { ...config.realtimeConfig };
+                  updater(realtimeConfig);
+                  config.update(
+                    (config) => (config.realtimeConfig = realtimeConfig),
+                  );
+                }}
+              />
+            </List>
+          </div>
+        </details>
+      )}
+      <section
+        className={styles["settings-section"]}
+        aria-labelledby="danger-settings-title"
+      >
+        <h2
+          id="danger-settings-title"
+          className={styles["settings-section-title"]}
+        >
+          重置与清理
+        </h2>
         <DangerItems />
+      </section>
     </div>
   );
 

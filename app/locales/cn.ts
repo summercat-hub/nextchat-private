@@ -14,18 +14,18 @@ const cn = {
   },
   Auth: {
     Return: "返回",
-    Title: "需要密码",
-    Tips: "管理员开启了密码验证，请在下方填入访问码",
+    Title: "欢迎使用 Open Chat",
+    Tips: "输入访问密码以继续",
     SubTips: "或者输入你的 OpenAI 或 Google AI 密钥",
-    Input: "在此处填写访问码",
-    Confirm: "确认",
+    Input: "访问密码",
+    Confirm: "继续",
     Later: "稍后再说",
     SaasTips: "配置太麻烦，想要立即使用",
     TopTips:
       "🥳 NextChat AI 首发优惠，立刻解锁 OpenAI o1, GPT-4o, Claude-3.5 等最新大模型",
   },
   ChatItem: {
-    ChatItemCount: (count: number) => `${count} 条对话`,
+    ChatItemCount: (count: number) => `${count} 条消息`,
   },
   Chat: {
     SubTitle: (count: number) => `共 ${count} 条对话`,
@@ -170,7 +170,7 @@ const cn = {
       },
     },
     Lang: {
-      Name: "Language", // 注意：如果要添加新的翻译，请不要翻译此值，将它保留为 `Language`
+      Name: "语言",
       All: "所有语言",
     },
     Avatar: "头像",

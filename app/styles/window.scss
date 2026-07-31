@@ -1,7 +1,7 @@
 .window-header {
   min-height: 68px;
   padding: calc(10px + env(safe-area-inset-top)) 20px 10px;
-  border-bottom: 1px solid var(--separator);
+  border-bottom: 0;
   position: relative;
   z-index: 20;
   display: flex;
@@ -11,6 +11,18 @@
   background: var(--surface-material);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
+
+  &::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -8px;
+    left: 0;
+    height: 8px;
+    pointer-events: none;
+    background: linear-gradient(var(--chrome-shadow), transparent);
+    opacity: 0.45;
+  }
 }
 
 .window-header-title {
@@ -19,7 +31,7 @@
 
   .window-header-main-title {
     font-size: clamp(18px, 2vw, 20px);
-    font-weight: 700;
+    font-weight: 650;
     line-height: 1.15;
     letter-spacing: -0.015em;
     overflow: hidden;
@@ -45,7 +57,7 @@
   margin-left: 8px;
 }
 
-@media only screen and (max-width: 640px) {
+@media only screen and (max-width: 860px) {
   .window-header {
     min-height: calc(58px + env(safe-area-inset-top));
     padding-right: 12px;

@@ -116,7 +116,7 @@
         padding: 2px 8px;
         border-radius: 4px;
         font-size: 12px;
-        background-color: #16a34a;
+  background-color: #007aff;
         color: #fff;
         animation: pulse 1.5s infinite;
 
@@ -125,7 +125,7 @@
         }
 
         &[data-status="starting"] {
-          background-color: #4ade80;
+  background-color: #64a8ff;
         }
 
         &[data-status="error"] {
@@ -160,7 +160,7 @@
             padding: 2px 8px;
             border-radius: 4px;
             font-size: 12px;
-            background-color: #22c55e;
+  background-color: #3b82f6;
             color: #fff;
 
             &.error {

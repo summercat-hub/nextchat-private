@@ -142,7 +142,7 @@ export function useWindowSize() {
   return size;
 }
 
-export const MOBILE_MAX_WIDTH = 640;
+export const MOBILE_MAX_WIDTH = 860;
 export const COMPACT_MAX_WIDTH = 1024;
 
 export function useMobileScreen() {

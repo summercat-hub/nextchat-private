@@ -22,6 +22,7 @@ export function IconButton(props: {
   aria?: string;
   ariaExpanded?: boolean;
   ariaHasPopup?: React.AriaAttributes["aria-haspopup"];
+  role?: React.AriaRole;
 }) {
   return (
     <button
@@ -39,7 +40,7 @@ export function IconButton(props: {
       onClick={props.onClick}
       title={props.title}
       disabled={props.disabled}
-      role="button"
+      role={props.role ?? "button"}
       tabIndex={props.tabIndex}
       autoFocus={props.autoFocus}
       style={props.style}

@@ -4,6 +4,7 @@ require("../polyfill");
 
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -29,6 +30,7 @@ import {
   Route,
   Routes,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 import { SideBar } from "./sidebar";
 import { useAppConfig } from "../store/config";
@@ -296,6 +298,8 @@ function findTouch(touches: TouchList, identifier: number) {
 function Screen() {
   const config = useAppConfig();
   const location = useLocation();
+  const navigate = useNavigate();
+  const accessStore = useAccessStore();
   const isArtifact = location.pathname.includes(Path.Artifacts);
   const isAuth = location.pathname === Path.Auth;
   const isSd = location.pathname === Path.Sd;
@@ -308,6 +312,8 @@ function Screen() {
   const [isDrawerDragging, setIsDrawerDragging] = useState(false);
   const [isDrawerSettling, setIsDrawerSettling] = useState(false);
   const drawerTimer = useRef<number | null>(null);
+  const drawerPreviousFocus = useRef<HTMLElement | null>(null);
+  const previousPath = useRef(location.pathname);
   const suppressDrawerClick = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const windowContentRef = useRef<HTMLDivElement>(null);
@@ -335,6 +341,11 @@ function Screen() {
   const isDrawerVisible = isMobileScreen && drawerOffset > 0.5;
 
   useEffect(() => {
+    if (isAuth || isArtifact || accessStore.isAuthorized()) return;
+    navigate(Path.Auth, { replace: true });
+  }, [accessStore, isArtifact, isAuth, location.pathname, navigate]);
+
+  useEffect(() => {
     latestDrawerState.current = {
       isOpen: isDrawerOpen,
       offset: drawerOffset,
@@ -351,6 +362,8 @@ function Screen() {
   }, []);
 
   useEffect(() => {
+    const previousPathname = previousPath.current;
+    previousPath.current = location.pathname;
     if (!isMobileScreen) {
       setIsDrawerOpen(false);
       setDrawerOffset(0);
@@ -366,13 +379,16 @@ function Screen() {
     ) {
       setIsDrawerOpen(true);
       setDrawerOffset(maxDistance);
-    } else if (location.pathname !== Path.Chat) {
+    } else if (
+      location.pathname !== Path.Chat ||
+      previousPathname !== Path.Chat
+    ) {
       setIsDrawerOpen(false);
       setDrawerOffset(0);
     }
   }, [isMobileScreen, location.pathname]);
 
-  const settleDrawer = (open: boolean) => {
+  const settleDrawer = useCallback((open: boolean) => {
     const maxDistance = getDrawerDistance();
     setIsDrawerOpen(open);
     setIsDrawerDragging(false);
@@ -385,7 +401,7 @@ function Screen() {
     drawerTimer.current = window.setTimeout(() => {
       setIsDrawerSettling(false);
     }, DRAWER_SETTLE_DURATION);
-  };
+  }, []);
 
   useEffect(() => {
     const openMobileDrawer = () => {
@@ -702,10 +718,57 @@ function Screen() {
     : 0;
   const drawerInverseProgress = 1 - drawerProgress;
 
-  const closeDrawer = () => {
+  const closeDrawer = useCallback(() => {
     if (!isDrawerOpen) return;
     settleDrawer(false);
-  };
+  }, [isDrawerOpen, settleDrawer]);
+
+  useEffect(() => {
+    if (!isMobileScreen) {
+      drawerPreviousFocus.current = null;
+      return;
+    }
+
+    let focusFrame = 0;
+    if (isDrawerOpen) {
+      drawerPreviousFocus.current ??=
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      focusFrame = window.requestAnimationFrame(() => {
+        const sidebar = containerRef.current?.querySelector<HTMLElement>(
+          "[data-mobile-sidebar]",
+        );
+        sidebar
+          ?.querySelector<HTMLElement>(
+            'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+          )
+          ?.focus({ preventScroll: true });
+      });
+    } else if (drawerPreviousFocus.current) {
+      const previousFocus = drawerPreviousFocus.current;
+      drawerPreviousFocus.current = null;
+      focusFrame = window.requestAnimationFrame(() => {
+        if (document.contains(previousFocus)) {
+          previousFocus.focus({ preventScroll: true });
+        }
+      });
+    }
+
+    return () => window.cancelAnimationFrame(focusFrame);
+  }, [isDrawerOpen, isMobileScreen]);
+
+  useEffect(() => {
+    if (!isMobileScreen || !isDrawerOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeDrawer();
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [closeDrawer, isDrawerOpen, isMobileScreen]);
 
   const handleContainerClickCapture = (
     event: React.MouseEvent<HTMLDivElement>,
@@ -741,6 +804,7 @@ function Screen() {
     return (
       <>
         <SideBar
+          mobileOpen={isDrawerOpen}
           onMobileDismiss={() => {
             if (isMobileScreen) closeDrawer();
           }}
@@ -751,6 +815,8 @@ function Screen() {
             [styles["drawer-open"]]: isMobileScreen && drawerOffset > 0,
           })}
           onClickCapture={handleDrawerClickCapture}
+          aria-hidden={isDrawerOpen ? "true" : undefined}
+          {...((isDrawerOpen ? { inert: "" } : {}) as any)}
         >
           <Routes>
             <Route path={Path.Home} element={<Chat />} />

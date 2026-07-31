@@ -131,6 +131,7 @@ export function ListItem(props: {
   className?: string;
   onClick?: (e: MouseEvent) => void;
   vertical?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <div
@@ -138,10 +139,22 @@ export function ListItem(props: {
         styles["list-item"],
         {
           [styles["vertical"]]: props.vertical,
+          [styles["list-item-interactive"]]: !!props.onClick,
+          [styles["list-item-disabled"]]: props.disabled,
         },
         props.className,
       )}
       onClick={props.onClick}
+      role={props.onClick ? "button" : undefined}
+      tabIndex={props.onClick && !props.disabled ? 0 : undefined}
+      aria-disabled={props.disabled || undefined}
+      onKeyDown={(event) => {
+        if (!props.onClick || props.disabled) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          event.currentTarget.click();
+        }
+      }}
     >
       <div className={styles["list-header"]}>
         {props.icon && <div className={styles["list-icon"]}>{props.icon}</div>}
@@ -201,6 +214,7 @@ export function Modal(props: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const onClose = props.onClose;
+  const onCloseRef = useRef(onClose);
   const isCentered = !!props.centered;
   const showClose = props.showClose !== false;
   const showMaximize = props.showMaximize !== false;
@@ -209,20 +223,86 @@ export function Modal(props: ModalProps) {
   const [sheetOffset, setSheetOffset] = useState(0);
   const [isSheetDragging, setIsSheetDragging] = useState(false);
   const sheetOffsetRef = useRef(0);
-  const sheetCloseTimer = useRef<number | null>(null);
+  const sheetAnimationFrame = useRef<number | null>(null);
   const sheetGesture = useRef({
     pointerId: -1,
     startY: 0,
+    startOffset: 0,
     lastY: 0,
     lastTime: 0,
     velocityY: 0,
+    samples: [] as Array<{ y: number; time: number }>,
   });
 
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   const updateSheetOffset = useCallback((nextOffset: number) => {
-    const normalizedOffset = Math.max(0, nextOffset);
-    sheetOffsetRef.current = normalizedOffset;
-    setSheetOffset(normalizedOffset);
+    sheetOffsetRef.current = nextOffset;
+    setSheetOffset(nextOffset);
+
+    const modal = modalRef.current;
+    const mask = modal?.parentElement;
+    if (modal && mask?.classList.contains("modal-mask")) {
+      const progress = Math.min(
+        1,
+        Math.max(
+          0,
+          nextOffset / Math.max(1, modal.getBoundingClientRect().height),
+        ),
+      );
+      mask.style.setProperty("--sheet-scrim-visibility", String(1 - progress));
+    }
   }, []);
+
+  const cancelSheetAnimation = useCallback(() => {
+    if (sheetAnimationFrame.current !== null) {
+      window.cancelAnimationFrame(sheetAnimationFrame.current);
+      sheetAnimationFrame.current = null;
+    }
+  }, []);
+
+  const animateSheetTo = useCallback(
+    (target: number, initialVelocity: number, onComplete?: () => void) => {
+      cancelSheetAnimation();
+
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        updateSheetOffset(target);
+        onComplete?.();
+        return;
+      }
+
+      let position = sheetOffsetRef.current;
+      let velocity = initialVelocity;
+      let lastTime = performance.now();
+      const omega = 18;
+      const dampingRatio = Math.abs(initialVelocity) > 900 ? 0.86 : 1;
+
+      const tick = (now: number) => {
+        const delta = Math.min(0.032, Math.max(0.001, (now - lastTime) / 1000));
+        lastTime = now;
+        const acceleration =
+          -2 * dampingRatio * omega * velocity -
+          omega * omega * (position - target);
+        velocity += acceleration * delta;
+        position += velocity * delta;
+        updateSheetOffset(position);
+
+        if (Math.abs(velocity) < 5 && Math.abs(position - target) < 0.5) {
+          updateSheetOffset(target);
+          sheetAnimationFrame.current = null;
+          onComplete?.();
+          return;
+        }
+
+        sheetAnimationFrame.current = window.requestAnimationFrame(tick);
+      };
+
+      sheetAnimationFrame.current = window.requestAnimationFrame(tick);
+    },
+    [cancelSheetAnimation, updateSheetOffset],
+  );
 
   const startSheetDrag = useCallback(
     (event: React.PointerEvent<HTMLElement>) => {
@@ -236,18 +316,21 @@ export function Modal(props: ModalProps) {
         return;
       }
 
+      cancelSheetAnimation();
       event.currentTarget.setPointerCapture(event.pointerId);
       const now = performance.now();
       sheetGesture.current = {
         pointerId: event.pointerId,
         startY: event.clientY,
+        startOffset: sheetOffsetRef.current,
         lastY: event.clientY,
         lastTime: now,
         velocityY: 0,
+        samples: [{ y: event.clientY, time: now }],
       };
       setIsSheetDragging(true);
     },
-    [isCentered, isMobileScreen],
+    [cancelSheetAnimation, isCentered, isMobileScreen],
   );
 
   const moveSheetDrag = useCallback(
@@ -257,16 +340,30 @@ export function Modal(props: ModalProps) {
 
       const now = performance.now();
       const deltaTime = Math.max(1, now - gesture.lastTime);
-      gesture.velocityY = ((event.clientY - gesture.lastY) / deltaTime) * 1000;
+      gesture.samples.push({ y: event.clientY, time: now });
+      gesture.samples = gesture.samples.filter(
+        (sample) => now - sample.time <= 90,
+      );
+      const firstSample = gesture.samples[0];
+      gesture.velocityY = firstSample
+        ? ((event.clientY - firstSample.y) /
+            Math.max(1, now - firstSample.time)) *
+          1000
+        : ((event.clientY - gesture.lastY) / deltaTime) * 1000;
       gesture.lastY = event.clientY;
       gesture.lastTime = now;
 
-      const offset = event.clientY - gesture.startY;
-      if (offset > 0) {
+      const nextOffset = gesture.startOffset + event.clientY - gesture.startY;
+      if (nextOffset >= 0) {
         event.preventDefault();
-        updateSheetOffset(offset);
+        updateSheetOffset(nextOffset);
       } else {
-        updateSheetOffset(offset * 0.12);
+        const dimension =
+          modalRef.current?.getBoundingClientRect().height ?? 600;
+        const overshoot = Math.abs(nextOffset);
+        const resistance =
+          (overshoot * dimension * 0.5) / (dimension + 0.5 * overshoot);
+        updateSheetOffset(-resistance);
       }
     },
     [updateSheetOffset],
@@ -280,19 +377,25 @@ export function Modal(props: ModalProps) {
 
       const modalHeight =
         modalRef.current?.getBoundingClientRect().height ?? 600;
+      const projectedOffset =
+        sheetOffsetRef.current +
+        (gesture.velocityY / 1000) * (0.99 / (1 - 0.99));
       const shouldClose =
         !cancelled &&
-        (sheetOffsetRef.current > Math.min(170, modalHeight * 0.28) ||
+        (projectedOffset > Math.min(170, modalHeight * 0.28) ||
           (gesture.velocityY > 850 && sheetOffsetRef.current > 36));
 
       if (shouldClose) {
-        updateSheetOffset(modalHeight + 24);
-        sheetCloseTimer.current = window.setTimeout(() => onClose?.(), 220);
+        animateSheetTo(
+          modalHeight + 24,
+          gesture.velocityY,
+          () => onCloseRef.current?.(),
+        );
       } else {
-        updateSheetOffset(0);
+        animateSheetTo(0, gesture.velocityY);
       }
     },
-    [onClose, updateSheetOffset],
+    [animateSheetTo],
   );
 
   const finishSheetDrag = useCallback(
@@ -343,9 +446,11 @@ export function Modal(props: ModalProps) {
       sheetGesture.current = {
         pointerId: -2,
         startY: touch.clientY,
+        startOffset: sheetOffsetRef.current,
         lastY: touch.clientY,
         lastTime: now,
         velocityY: 0,
+        samples: [{ y: touch.clientY, time: now }],
       };
     };
 
@@ -412,18 +517,18 @@ export function Modal(props: ModalProps) {
     const previousActiveElement = document.activeElement as HTMLElement | null;
     const modal = modalRef.current;
     const focusableSelector =
-      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+      'button:not([disabled]):not([tabindex="-1"]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
     const focusInitialElement = () => {
-      const firstFocusable =
-        modal?.querySelector<HTMLElement>(focusableSelector);
-      (firstFocusable ?? modal)?.focus();
+      const preferredFocus =
+        modal?.querySelector<HTMLElement>("[data-autofocus]") ?? modal;
+      preferredFocus?.focus({ preventScroll: true });
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        if (closeOnEscape) onClose?.();
+        if (closeOnEscape) onCloseRef.current?.();
         return;
       }
 
@@ -455,12 +560,11 @@ export function Modal(props: ModalProps) {
 
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      if (sheetCloseTimer.current !== null) {
-        window.clearTimeout(sheetCloseTimer.current);
-      }
+      cancelSheetAnimation();
+      modal?.parentElement?.style.removeProperty("--sheet-scrim-visibility");
       previousActiveElement?.focus();
     };
-  }, [closeOnEscape, onClose]);
+  }, [cancelSheetAnimation, closeOnEscape]);
 
   const [isMax, setMax] = useState(!!props.defaultMax);
 
@@ -487,11 +591,9 @@ export function Modal(props: ModalProps) {
       }
     >
       {isMobileScreen && !isCentered && (
-        <button
-          type="button"
+        <div
           className={styles["modal-grabber"]}
-          aria-label="向下拖动关闭"
-          tabIndex={-1}
+          aria-hidden="true"
           onPointerDown={startSheetDrag}
           onPointerMove={moveSheetDrag}
           onPointerUp={(event) => finishSheetDrag(event)}
@@ -584,7 +686,12 @@ export type ToastProps = {
 
 export function Toast(props: ToastProps) {
   return (
-    <div className={styles["toast-container"]}>
+    <div
+      className={styles["toast-container"]}
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <div className={styles["toast-content"]}>
         <span>{props.content}</span>
         {props.action && (
@@ -653,16 +760,16 @@ export function PasswordInput(
 
   return (
     <div className={"password-input-container"}>
-      <IconButton
-        aria={props.aria}
-        icon={visible ? <EyeIcon /> : <EyeOffIcon />}
-        onClick={changeVisibility}
-        className={"password-eye"}
-      />
       <input
         {...props}
         type={visible ? "text" : "password"}
         className={"password-input"}
+      />
+      <IconButton
+        aria={visible ? "隐藏密码" : props.aria ?? "显示密码"}
+        icon={visible ? <EyeIcon /> : <EyeOffIcon />}
+        onClick={changeVisibility}
+        className={"password-eye"}
       />
     </div>
   );
@@ -895,6 +1002,7 @@ export function Selector<T>(props: {
                   [styles["selector-item-disabled"]]: item.disable,
                 })}
                 key={i}
+                disabled={item.disable}
                 title={item.title}
                 subTitle={item.subTitle}
                 icon={<Avatar model={item.value as string} />}

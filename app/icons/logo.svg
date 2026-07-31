@@ -8,8 +8,8 @@
       <stop offset="1" stop-color="#2A7AFF"></stop>
     </linearGradient>
     <linearGradient id="logo_svg__b" x1="105.376" y1="84.416" x2="19.745" y2="131.163" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#01B3FF"></stop>
-      <stop offset="1" stop-color="#59ECFA"></stop>
+        <stop stop-color="#007AFF"></stop>
+        <stop offset="1" stop-color="#8AB8F8"></stop>
     </linearGradient>
     <linearGradient id="logo_svg__c" x1="102.734" y1="136.396" x2="192.577" y2="155.859" gradientUnits="userSpaceOnUse">
       <stop stop-color="#023BFF" stop-opacity="0.82"></stop>

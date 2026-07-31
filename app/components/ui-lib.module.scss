@@ -1,10 +1,9 @@
 @import "../styles/animation.scss";
 
 .card {
-  background-color: var(--white);
-  border-radius: 10px;
-  box-shadow: var(--card-shadow);
-  padding: 10px;
+  background-color: var(--surface-primary);
+  border-radius: 16px;
+  padding: 12px;
 }
 
 .popover {
@@ -19,7 +18,7 @@
   right: 0;
   top: calc(100% + 10px);
 }
-@media screen and (max-width: 640px) {
+@media screen and (max-width: 860px) {
   .popover-content {
     width: auto;
   }
@@ -39,10 +38,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 40px;
+  min-height: 56px;
   border-bottom: var(--border-in-light);
-  padding: 10px 20px;
-  animation: slide-in ease 0.6s;
+  padding: 8px 16px;
+  box-sizing: border-box;
 
   .list-header {
     display: flex;
@@ -53,13 +52,17 @@
     }
 
     .list-item-title {
-      font-size: var(--list-item-title-font-size, 14px);
-      font-weight: bolder;
+      font-size: var(--list-item-title-font-size, 16px);
+      font-weight: 550;
+      line-height: 1.35;
     }
 
     .list-item-sub-title {
-      font-size: 12px;
+      margin-top: 2px;
+      color: var(--text-secondary);
+      font-size: 13px;
       font-weight: normal;
+      line-height: 1.4;
     }
   }
 
@@ -77,13 +80,33 @@
   }
 }
 
+.list-item-interactive {
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    transform var(--motion-press) ease-out;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--hover-color);
+  }
+
+  &:active {
+    transform: scale(0.995);
+  }
+}
+
+.list-item-disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
 .list {
   border: var(--border-in-light);
-  border-radius: 10px;
-  box-shadow: var(--card-shadow);
+  border-radius: 16px;
   margin-bottom: 20px;
-  animation: slide-in ease 0.3s;
-  background: var(--white);
+  background: var(--surface-primary);
+  overflow: hidden;
 }
 
 .list .list-item:last-child {
@@ -106,16 +129,22 @@
   box-shadow: var(--elevated-shadow);
   background-color: var(--surface-elevated);
   border: var(--border-in-light);
-  border-radius: 18px;
+  border-radius: 20px;
   width: min(80vw, 900px);
   min-width: 300px;
   max-height: min(calc(var(--full-height) - 32px), 760px);
   overflow: hidden;
+  outline: none;
   animation: modal-in var(--motion-normal) var(--ease-out);
   backdrop-filter: blur(22px) saturate(160%);
   -webkit-backdrop-filter: blur(22px) saturate(160%);
   display: flex;
   flex-direction: column;
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
 
   --modal-padding: 20px;
 
@@ -137,19 +166,32 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: var(--border-in-light);
+    position: relative;
+    border-bottom: 0;
+
+    &::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: -8px;
+      left: 0;
+      height: 8px;
+      pointer-events: none;
+      background: linear-gradient(var(--chrome-shadow), transparent);
+      opacity: 0.42;
+    }
 
     .modal-title {
-      font-weight: bolder;
-      font-size: 16px;
+      font-weight: 650;
+      font-size: 17px;
     }
 
     .modal-header-actions {
       display: flex;
 
       .modal-header-action {
-        width: 40px;
-        height: 40px;
+        width: 44px;
+        height: 44px;
         padding: 0;
         display: inline-flex;
         align-items: center;
@@ -215,7 +257,7 @@
   }
 }
 
-@media screen and (max-width: 640px) {
+@media screen and (max-width: 860px) {
   .modal-container {
     position: relative;
     width: 100vw;
@@ -230,9 +272,7 @@
     animation-name: sheet-in;
     transform: translateY(var(--sheet-offset, 0));
     opacity: var(--sheet-opacity, 1);
-    transition:
-      transform 220ms var(--ease-out),
-      opacity 220ms var(--ease-out);
+    transition: none;
     will-change: transform, opacity;
 
     &-dragging {
@@ -343,9 +383,9 @@
 }
 
 .settings-sheet-modal {
-  @media screen and (max-width: 640px) {
-    height: 80vh;
-    max-height: 80vh;
+  @media screen and (max-width: 860px) {
+    height: 80dvh;
+    max-height: 80dvh;
     min-height: 0;
     display: flex;
 
@@ -366,7 +406,7 @@
   position: fixed;
   left: 0;
   bottom: 0;
-  animation: slide-in ease 0.6s;
+  animation: none;
   z-index: 99999;
 }
 
@@ -380,7 +420,7 @@
 
 .toast-container {
   position: fixed;
-  bottom: 5vh;
+  bottom: calc(16px + env(safe-area-inset-bottom));
   left: 0;
   width: 100vw;
   display: flex;
@@ -422,11 +462,11 @@
 
 .input {
   border: var(--border-in-light);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px;
   font-family: inherit;
-  background-color: var(--white);
-  color: var(--black);
+  background-color: var(--control-material);
+  color: var(--text-primary);
   resize: none;
   min-width: 50px;
 }
@@ -442,14 +482,14 @@
   }
 
   .select-with-icon-select {
-    height: 100%;
+    min-height: 44px;
     border: var(--border-in-light);
     padding: 10px 35px 10px 10px;
-    border-radius: 10px;
+    border-radius: 12px;
     appearance: none;
     cursor: pointer;
-    background-color: var(--white);
-    color: var(--black);
+    background-color: var(--control-material);
+    color: var(--text-primary);
     text-align: center;
   }
 
@@ -465,11 +505,11 @@
 .modal-input {
   height: 100%;
   width: 100%;
-  border-radius: 10px;
+  border-radius: 12px;
   border: var(--border-in-light);
   box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.03);
-  background-color: var(--white);
-  color: var(--black);
+  background-color: var(--control-material);
+  color: var(--text-primary);
   font-family: inherit;
   font-size: 16px;
   line-height: 1.5;
@@ -510,7 +550,7 @@
 
       .list-item {
         cursor: pointer;
-        background-color: var(--white);
+        background-color: var(--surface-primary);
 
         &:hover {
           filter: brightness(0.95);
@@ -521,6 +561,29 @@
         }
       }
     }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-container,
+  .modal-container-centered {
+    animation: none;
+  }
+
+  .modal-container:not(.modal-container-centered) {
+    transition: opacity 120ms ease-out;
+    transform: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .modal-container,
+  .toast-content,
+  .list {
+    background: var(--surface-primary);
+    border-color: currentColor;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 

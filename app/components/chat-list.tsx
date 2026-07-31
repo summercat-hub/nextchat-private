@@ -19,6 +19,37 @@ import { useRef, useEffect } from "react";
 import { showConfirm } from "./ui-lib";
 import clsx from "clsx";
 
+function formatSessionTime(timestamp: string | number) {
+  const value = new Date(timestamp);
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const startOfValue = new Date(
+    value.getFullYear(),
+    value.getMonth(),
+    value.getDate(),
+  );
+  const dayDifference = Math.round(
+    (startOfToday.getTime() - startOfValue.getTime()) / 86_400_000,
+  );
+  const time = value.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (dayDifference === 0) return `今天 ${time}`;
+  if (dayDifference === 1) return "昨天";
+  if (value.getFullYear() === now.getFullYear()) {
+    return `${value.getMonth() + 1}月${value.getDate()}日`;
+  }
+  return `${value.getFullYear()}年${
+    value.getMonth() + 1
+  }月${value.getDate()}日`;
+}
+
 export function ChatItem(props: {
   onClick?: () => void;
   onDelete?: () => void;
@@ -45,7 +76,9 @@ export function ChatItem(props: {
     <Draggable draggableId={`${props.id}`} index={props.index}>
       {(provided) => (
         <div
-          className={styles["chat-item-wrapper"]}
+          className={clsx(styles["chat-item-wrapper"], {
+            [styles["chat-item-wrapper-selected"]]: props.selected,
+          })}
           ref={(ele) => {
             draggableRef.current = ele;
             provided.innerRef(ele);
@@ -60,6 +93,10 @@ export function ChatItem(props: {
                 (currentPath === Path.Chat || currentPath === Path.Home),
             })}
             onClick={props.onClick}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              props.onDelete?.();
+            }}
             aria-current={props.selected ? "page" : undefined}
             aria-label={`${props.title}，${Locale.ChatItem.ChatItemCount(
               props.count,
@@ -152,7 +189,7 @@ export function ChatList(props: { narrow?: boolean }) {
             {sessions.map((item, i) => (
               <ChatItem
                 title={item.topic}
-                time={new Date(item.lastUpdate).toLocaleString()}
+                time={formatSessionTime(item.lastUpdate)}
                 count={item.messages.length}
                 key={item.id}
                 id={item.id}

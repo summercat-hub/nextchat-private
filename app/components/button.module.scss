@@ -28,11 +28,16 @@
   }
 
   &.primary {
-    background-color: var(--primary);
-    color: white;
+    background-color: var(--action-primary);
+    color: var(--action-primary-foreground);
 
     path {
-      fill: white !important;
+      fill: currentColor !important;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--action-primary-hover);
     }
   }
 
@@ -51,8 +56,8 @@
     }
   }
 
-  &:hover,
-  &:focus-visible {
+  &:not(.primary):hover,
+  &:not(.primary):focus-visible {
     border-color: var(--primary);
     background-color: var(--hover-color);
   }
@@ -71,14 +76,14 @@
 }
 
 .icon-button-icon {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-@media only screen and (max-width: 640px) {
+@media only screen and (max-width: 860px) {
   .icon-button {
     min-width: 44px;
     min-height: 44px;
@@ -87,7 +92,7 @@
 }
 
 .icon-button-text {
-  font-size: var(--icon-button-text-size, 12px);
+  font-size: var(--icon-button-text-size, 14px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
