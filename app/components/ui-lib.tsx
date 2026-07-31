@@ -208,6 +208,7 @@ interface ModalProps {
   showMaximize?: boolean;
   closeOnEscape?: boolean;
   className?: string;
+  titleClassName?: string;
   style?: CSSProperties;
 }
 export function Modal(props: ModalProps) {
@@ -607,7 +608,10 @@ export function Modal(props: ModalProps) {
         onPointerUp={(event) => finishSheetDrag(event)}
         onPointerCancel={(event) => finishSheetDrag(event, true)}
       >
-        <div id={titleId} className={styles["modal-title"]}>
+        <div
+          id={titleId}
+          className={clsx(styles["modal-title"], props.titleClassName)}
+        >
           {props.title}
         </div>
 

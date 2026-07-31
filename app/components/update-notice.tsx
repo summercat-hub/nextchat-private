@@ -31,6 +31,7 @@ export function UpdateNotice() {
     <div className={clsx("modal-mask", styles["update-notice-mask"])}>
       <Modal
         title="Open Chat 的智能和速度现已全面提升啦！"
+        titleClassName={styles["update-notice-title"]}
         onClose={closeNotice}
         centered
         showClose
@@ -63,7 +64,7 @@ export function UpdateNotice() {
             </p>
           </div>
 
-          <p className={styles["update-notice-closing"]}>敬请期待更多更新~</p>
+          <p className={styles["update-notice-closing"]}>敬请期待更多更新吧~</p>
         </div>
       </Modal>
     </div>
