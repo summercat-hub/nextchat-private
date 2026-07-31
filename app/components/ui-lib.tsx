@@ -190,11 +190,19 @@ interface ModalProps {
   defaultMax?: boolean;
   footer?: React.ReactNode;
   onClose?: () => void;
+  centered?: boolean;
+  showClose?: boolean;
+  showMaximize?: boolean;
+  closeOnEscape?: boolean;
 }
 export function Modal(props: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const onClose = props.onClose;
+  const isCentered = !!props.centered;
+  const showClose = props.showClose !== false;
+  const showMaximize = props.showMaximize !== false;
+  const closeOnEscape = props.closeOnEscape !== false;
   const isMobileScreen = useMobileScreen();
   const [sheetOffset, setSheetOffset] = useState(0);
   const [isSheetDragging, setIsSheetDragging] = useState(false);
@@ -216,7 +224,7 @@ export function Modal(props: ModalProps) {
 
   const startSheetDrag = useCallback(
     (event: React.PointerEvent<HTMLElement>) => {
-      if (!isMobileScreen || event.button !== 0) return;
+      if (!isMobileScreen || isCentered || event.button !== 0) return;
 
       const target = event.target as HTMLElement;
       if (
@@ -237,7 +245,7 @@ export function Modal(props: ModalProps) {
       };
       setIsSheetDragging(true);
     },
-    [isMobileScreen],
+    [isCentered, isMobileScreen],
   );
 
   const moveSheetDrag = useCallback(
@@ -299,7 +307,7 @@ export function Modal(props: ModalProps) {
   );
 
   useEffect(() => {
-    if (!isMobileScreen) return;
+    if (!isMobileScreen || isCentered) return;
 
     const modal = modalRef.current;
     const content = modal?.querySelector<HTMLElement>(
@@ -396,7 +404,7 @@ export function Modal(props: ModalProps) {
       modal.removeEventListener("touchend", onTouchEnd);
       modal.removeEventListener("touchcancel", onTouchCancel);
     };
-  }, [isMobileScreen, settleSheetDrag, updateSheetOffset]);
+  }, [isCentered, isMobileScreen, settleSheetDrag, updateSheetOffset]);
 
   useEffect(() => {
     const previousActiveElement = document.activeElement as HTMLElement | null;
@@ -412,7 +420,8 @@ export function Modal(props: ModalProps) {
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose?.();
+        e.preventDefault();
+        if (closeOnEscape) onClose?.();
         return;
       }
 
@@ -449,7 +458,7 @@ export function Modal(props: ModalProps) {
       }
       previousActiveElement?.focus();
     };
-  }, [onClose]);
+  }, [closeOnEscape, onClose]);
 
   const [isMax, setMax] = useState(!!props.defaultMax);
 
@@ -463,6 +472,7 @@ export function Modal(props: ModalProps) {
       className={clsx(styles["modal-container"], {
         [styles["modal-container-max"]]: isMax,
         [styles["modal-container-dragging"]]: isSheetDragging,
+        [styles["modal-container-centered"]]: isCentered,
       })}
       style={
         isMobileScreen
@@ -473,7 +483,7 @@ export function Modal(props: ModalProps) {
           : undefined
       }
     >
-      {isMobileScreen && (
+      {isMobileScreen && !isCentered && (
         <button
           type="button"
           className={styles["modal-grabber"]}
@@ -497,7 +507,7 @@ export function Modal(props: ModalProps) {
         </div>
 
         <div className={styles["modal-header-actions"]}>
-          {!isMobileScreen && (
+          {!isMobileScreen && showMaximize && (
             <button
               type="button"
               className={clsx(
@@ -510,14 +520,16 @@ export function Modal(props: ModalProps) {
               {isMax ? <MinIcon /> : <MaxIcon />}
             </button>
           )}
-          <button
-            type="button"
-            className={styles["modal-header-action"]}
-            aria-label="关闭"
-            onClick={onClose}
-          >
-            <CloseIcon />
-          </button>
+          {showClose && (
+            <button
+              type="button"
+              className={styles["modal-header-action"]}
+              aria-label="关闭"
+              onClick={onClose}
+            >
+              <CloseIcon />
+            </button>
+          )}
         </div>
       </div>
 

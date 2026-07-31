@@ -1,3 +1,10 @@
+:global(.modal-mask).update-notice-mask {
+  @media screen and (max-width: 640px) {
+    align-items: center;
+    padding: 16px;
+  }
+}
+
 .update-notice-content {
   color: var(--text-secondary);
   font-size: 15px;
