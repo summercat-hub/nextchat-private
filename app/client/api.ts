@@ -59,6 +59,7 @@ export interface LLMConfig {
   top_k?: number;
   reasoning_effort?: "none" | "low" | "medium" | "high" | "xhigh";
   service_tier?: "default" | "priority" | "flex";
+  disableNativeWebSearch?: boolean;
   max_tokens?: number;
   stream?: boolean;
   presence_penalty?: number;

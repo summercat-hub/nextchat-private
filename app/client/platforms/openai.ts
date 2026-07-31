@@ -62,11 +62,10 @@ export interface RequestPayload {
   }[];
   stream?: boolean;
   model: string;
-  temperature: number;
-  presence_penalty: number;
-  frequency_penalty: number;
-  top_p: number;
-  top_k?: number;
+  temperature?: number;
+  presence_penalty?: number;
+  frequency_penalty?: number;
+  top_p?: number;
   max_tokens?: number;
   max_completion_tokens?: number;
   reasoning?: {
@@ -203,6 +202,7 @@ export class ChatGPTApi implements LLMApi {
     const modelConfig = {
       ...useAppConfig.getState().modelConfig,
       ...useChatStore.getState().currentSession().mask.modelConfig,
+      ...options.config,
       ...{
         model: options.config.model,
         providerName: options.config.providerName,
@@ -217,16 +217,15 @@ export class ChatGPTApi implements LLMApi {
       options.config.model.startsWith("o3") ||
       options.config.model.startsWith("o4-mini");
     const isGpt5 = /(^|\/)gpt-5(?:[.-]|$)/i.test(modelConfig.model);
-    const isGemma4 = /google\/gemma-4-/i.test(modelConfig.model);
     const isPrivateGpt56Luna = modelConfig.model === PRIVATE_CHAT_MODEL;
     const activeReasoningEffort =
       modelConfig.reasoning_effort === "none"
         ? undefined
         : modelConfig.reasoning_effort;
-    const reasoningEnabled =
-      (isGemma4 || isPrivateGpt56Luna) && !!activeReasoningEffort;
+    const reasoningEnabled = isPrivateGpt56Luna && !!activeReasoningEffort;
     const requestedServiceTier = modelConfig.service_tier ?? "default";
-    const nativeWebSearchTools = isPrivateGpt56Luna
+    const nativeWebSearchTools =
+      isPrivateGpt56Luna && !options.config.disableNativeWebSearch
       ? [
           {
             type: "openrouter:web_search",
@@ -262,31 +261,11 @@ export class ChatGPTApi implements LLMApi {
           messages.push({ role: v.role, content });
       }
 
-      if (isGemma4 && reasoningEnabled) {
-        const thinkingToken = "<|think|>";
-        const systemMessage = messages.find(
-          (message) => message.role === "system",
-        );
-        if (systemMessage && typeof systemMessage.content === "string") {
-          if (!systemMessage.content.startsWith(thinkingToken)) {
-            systemMessage.content = `${thinkingToken}\n${systemMessage.content}`;
-          }
-        } else {
-          messages.unshift({ role: "system", content: thinkingToken });
-        }
-      }
-
-      // O1 does not support the regular sampling controls used below.
       requestPayload = {
         messages,
         stream: options.config.stream,
         model: modelConfig.model,
-        temperature: !isO1OrO3 && !isGpt5 ? modelConfig.temperature : 1,
-        presence_penalty: !isO1OrO3 ? modelConfig.presence_penalty : 0,
-        frequency_penalty: !isO1OrO3 ? modelConfig.frequency_penalty : 0,
-        top_p: !isO1OrO3 ? modelConfig.top_p : 1,
-        top_k: isGemma4 ? modelConfig.top_k : undefined,
-        reasoning: isGemma4 || isPrivateGpt56Luna
+        reasoning: isPrivateGpt56Luna
           ? {
               enabled: reasoningEnabled,
               effort: reasoningEnabled ? activeReasoningEffort : undefined,
@@ -295,13 +274,29 @@ export class ChatGPTApi implements LLMApi {
         tools:
           nativeWebSearchTools.length > 0 ? nativeWebSearchTools : undefined,
         service_tier:
-          isGemma4 && requestedServiceTier !== "default"
+          isPrivateGpt56Luna && requestedServiceTier !== "default"
             ? requestedServiceTier
             : undefined,
         stream_options: options.config.stream
           ? { include_usage: true, continuous_usage_stats: false }
           : undefined,
       };
+
+      // GPT-5.6 Luna does not advertise sampling controls through OpenRouter.
+      // Keep these fields for other OpenAI-compatible models, but omit them
+      // entirely from Luna requests instead of sending values that providers
+      // may silently ignore.
+      if (!isPrivateGpt56Luna) {
+        requestPayload.temperature =
+          !isO1OrO3 && !isGpt5 ? modelConfig.temperature : 1;
+        requestPayload.presence_penalty = !isO1OrO3
+          ? modelConfig.presence_penalty
+          : 0;
+        requestPayload.frequency_penalty = !isO1OrO3
+          ? modelConfig.frequency_penalty
+          : 0;
+        requestPayload.top_p = !isO1OrO3 ? modelConfig.top_p : 1;
+      }
 
       if (isGpt5) {
         // Remove max_tokens if present
@@ -396,7 +391,6 @@ export class ChatGPTApi implements LLMApi {
             ? requestPayload.temperature
             : undefined,
         topP: "top_p" in requestPayload ? requestPayload.top_p : undefined,
-        topK: "top_k" in requestPayload ? requestPayload.top_k : undefined,
         maxTokens:
           "max_completion_tokens" in requestPayload
             ? requestPayload.max_completion_tokens
@@ -441,7 +435,6 @@ export class ChatGPTApi implements LLMApi {
           ? requestPayload.temperature
           : undefined,
       topP: "top_p" in requestPayload ? requestPayload.top_p : undefined,
-      topK: "top_k" in requestPayload ? requestPayload.top_k : undefined,
       maxTokens:
         "max_completion_tokens" in requestPayload
           ? requestPayload.max_completion_tokens

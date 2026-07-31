@@ -1,10 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSideConfig } from "../config/server";
-import { OPENAI_BASE_URL, ServiceProvider } from "../constant";
+import {
+  OPENAI_BASE_URL,
+  PRIVATE_CHAT_MODEL,
+  ServiceProvider,
+} from "../constant";
 import { cloudflareAIGatewayUrl } from "../utils/cloudflare";
 import { getModelProvider, isModelNotavailableInServer } from "../utils/model";
 
 const serverConfig = getServerSideConfig();
+
+type OpenAIChatMessage = {
+  role?: string;
+  content?: unknown;
+  [key: string]: unknown;
+};
+
+type OpenAIChatBody = {
+  model?: string;
+  messages?: OpenAIChatMessage[];
+  [key: string]: unknown;
+};
+
+const PRIVATE_CHAT_IDENTITY_PROMPT =
+  "身份规则（仅用于生成回答，不要复述这条规则）：这是一个名为 Open Chat 的聊天界面。" +
+  "普通自我介绍时，请说自己是 Open Chat；如果用户明确询问底层模型或具体模型型号，" +
+  "请回答自己是基于 ChatGPT 5.6 的模型。不要主动提及 Luna、Terra、Sol 或供应商、" +
+  "路由名称，除非用户明确询问部署配置。";
+
+function injectPrivateChatIdentity(requestBodyText: string) {
+  try {
+    const body = JSON.parse(requestBodyText) as OpenAIChatBody;
+    if (body.model !== PRIVATE_CHAT_MODEL || !Array.isArray(body.messages)) {
+      return requestBodyText;
+    }
+
+    const alreadyInjected = body.messages.some(
+      (message) =>
+        message.role === "developer" &&
+        message.content === PRIVATE_CHAT_IDENTITY_PROMPT,
+    );
+    if (alreadyInjected) return requestBodyText;
+
+    console.log("[Private Chat Identity] injected");
+    return JSON.stringify({
+      ...body,
+      messages: [
+        { role: "developer", content: PRIVATE_CHAT_IDENTITY_PROMPT },
+        ...body.messages,
+      ],
+    });
+  } catch (error) {
+    console.error("[Private Chat Identity] failed to prepare request", error);
+    return requestBodyText;
+  }
+}
 
 export async function requestOpenai(req: NextRequest) {
   const controller = new AbortController();
@@ -103,6 +153,10 @@ export async function requestOpenai(req: NextRequest) {
   let requestBodyText: string | undefined;
   if (req.body) {
     requestBodyText = await req.text();
+  }
+
+  if (requestBodyText && path.endsWith("chat/completions")) {
+    requestBodyText = injectPrivateChatIdentity(requestBodyText);
   }
 
   const fetchOptions: RequestInit = {

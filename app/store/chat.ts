@@ -24,6 +24,7 @@ import {
   KnowledgeCutOffDate,
   MCP_SYSTEM_TEMPLATE,
   MCP_TOOLS_TEMPLATE,
+  PRIVATE_CHAT_MODEL,
   ServiceProvider,
   StoreKey,
   SUMMARIZE_MODEL,
@@ -107,6 +108,38 @@ export const BOT_HELLO: ChatMessage = createMessage({
   content: Locale.Store.BotHello,
 });
 
+const TITLE_GENERATOR_SYSTEM_PROMPT =
+  "你是 Open Chat 的会话标题生成器。根据前面的完整对话，提炼用户真正讨论的核心主题。" +
+  "只返回四到五个中文汉字作为标题，不要解释、标点、引号、换行或其他文字。" +
+  "不要返回“主题提炼”“聊天主题”或“对话主题”等泛化占位词；如果没有明确主题，只返回“闲聊”。";
+
+const GENERIC_TOPIC_TITLES = new Set([
+  "主题提炼",
+  "聊天主题",
+  "对话主题",
+  "新的聊天",
+  "新聊天",
+]);
+
+function getFallbackTopic(messages: ChatMessage[]) {
+  const firstUserMessage = messages.find(
+    (message) => message.role === "user" && !message.isError,
+  );
+  const content = firstUserMessage
+    ? getMessageTextContent(firstUserMessage).replace(/\s+/g, " ").trim()
+    : "";
+
+  return content
+    ? trimTopic(content.slice(0, 24)) || DEFAULT_TOPIC
+    : DEFAULT_TOPIC;
+}
+
+function normalizeGeneratedTopic(topic: string) {
+  const normalized = trimTopic(topic).split(/\r?\n/, 1)[0].trim();
+  if (!normalized || GENERIC_TOPIC_TITLES.has(normalized)) return "";
+  return normalized.slice(0, 30);
+}
+
 function createEmptySession(): ChatSession {
   return {
     id: nanoid(),
@@ -129,6 +162,10 @@ function getSummarizeModel(
   currentModel: string,
   providerName: string,
 ): string[] {
+  if (currentModel === PRIVATE_CHAT_MODEL) {
+    return [PRIVATE_CHAT_MODEL, ServiceProvider.OpenAI];
+  }
+
   // if it is using gpt-* models, force to use 4o-mini to summarize
   if (currentModel.startsWith("gpt") || currentModel.startsWith("chatgpt")) {
     const configStore = useAppConfig.getState();
@@ -679,7 +716,10 @@ export const useChatStore = createPersistStore(
         }
 
         // if not config compressModel, then using getSummarizeModel
-        const [model, providerName] = modelConfig.compressModel
+        const isPrivateModel = modelConfig.model === PRIVATE_CHAT_MODEL;
+        const [model, providerName] = isPrivateModel
+          ? [PRIVATE_CHAT_MODEL, ServiceProvider.OpenAI]
+          : modelConfig.compressModel
           ? [modelConfig.compressModel, modelConfig.compressProviderName]
           : getSummarizeModel(
               session.mask.modelConfig.model,
@@ -704,7 +744,8 @@ export const useChatStore = createPersistStore(
         if (
           hasCompletedConversation &&
           ((config.enableAutoGenerateTitle &&
-            session.topic === DEFAULT_TOPIC) ||
+            (session.topic === DEFAULT_TOPIC ||
+              GENERIC_TOPIC_TITLES.has(session.topic))) ||
             refreshTitle)
         ) {
           const startIndex = Math.max(
@@ -718,26 +759,57 @@ export const useChatStore = createPersistStore(
             )
             .concat(
               createMessage({
+                role: "system",
+                content: TITLE_GENERATOR_SYSTEM_PROMPT,
+              }),
+              createMessage({
                 role: "user",
                 content: Locale.Store.Prompt.Topic,
               }),
             );
+          const fallbackTopic = getFallbackTopic(messages);
+          const titleConfig = {
+            model,
+            stream: false,
+            providerName,
+            ...(isPrivateModel && {
+              reasoning_effort: "low" as const,
+              max_tokens: 1024,
+              service_tier: "default" as const,
+              disableNativeWebSearch: true,
+            }),
+          };
           api.llm.chat({
             messages: topicMessages,
-            config: {
-              model,
-              stream: false,
-              providerName,
-            },
+            config: titleConfig,
             onFinish(message, responseRes) {
-              if (responseRes?.status === 200) {
-                get().updateTargetSession(
-                  session,
-                  (session) =>
-                    (session.topic =
-                      message.length > 0 ? trimTopic(message) : DEFAULT_TOPIC),
-                );
-              }
+              const generatedTopic = responseRes?.ok
+                ? normalizeGeneratedTopic(message)
+                : "";
+
+              get().updateTargetSession(session, (session) => {
+                if (generatedTopic) {
+                  session.topic = generatedTopic;
+                } else if (
+                  !session.topic ||
+                  session.topic === DEFAULT_TOPIC ||
+                  GENERIC_TOPIC_TITLES.has(session.topic)
+                ) {
+                  session.topic = fallbackTopic;
+                }
+              });
+            },
+            onError(error) {
+              console.error("[Title Generation] ", error);
+              get().updateTargetSession(session, (session) => {
+                if (
+                  !session.topic ||
+                  session.topic === DEFAULT_TOPIC ||
+                  GENERIC_TOPIC_TITLES.has(session.topic)
+                ) {
+                  session.topic = fallbackTopic;
+                }
+              });
             },
           });
         }
@@ -793,6 +865,7 @@ export const useChatStore = createPersistStore(
               stream: true,
               model,
               providerName,
+              disableNativeWebSearch: true,
             },
             onUpdate(message) {
               session.memoryPrompt = message;

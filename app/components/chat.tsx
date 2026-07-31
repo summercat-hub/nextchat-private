@@ -718,9 +718,6 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
                       const modelConfig = targetSession.mask.modelConfig;
                       modelConfig.model = option.model;
                       modelConfig.providerName = ServiceProvider.OpenAI;
-                      modelConfig.temperature = 1.0;
-                      modelConfig.top_p = 0.95;
-                      modelConfig.top_k = 64;
                       modelConfig.reasoning_effort = option.reasoningEffort;
                       modelConfig.max_tokens = option.maxTokens;
                       modelConfig.service_tier = "default";
