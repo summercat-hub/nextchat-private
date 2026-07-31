@@ -34,12 +34,7 @@ import {
   useAppConfig,
 } from "../store";
 
-import Locale, {
-  AllLangs,
-  ALL_LANG_OPTIONS,
-  changeLang,
-  getLang,
-} from "../locales";
+import Locale from "../locales";
 import { clientUpdate, semverCompare } from "../utils";
 import Link from "next/link";
 import {
@@ -517,7 +512,10 @@ export function Settings(props: { presentation?: "page" | "sheet" } = {}) {
   const showAccessCode = enabledAccessControl && !clientConfig?.isApp;
 
   const accessCodeComponent = showAccessCode && (
-    <ListItem title={Locale.Settings.Access.AccessCode.Title}>
+    <ListItem
+      className={styles["access-code-item"]}
+      title={Locale.Settings.Access.AccessCode.Title}
+    >
       <PasswordInput
         value={accessStore.accessCode}
         type="text"
@@ -1449,22 +1447,6 @@ export function Settings(props: { presentation?: "page" | "sheet" } = {}) {
             </div>
           </ListItem>
 
-          <ListItem title={Locale.Settings.Lang.Name}>
-            <Select
-              aria-label={Locale.Settings.Lang.Name}
-              value={getLang()}
-              onChange={(e) => {
-                changeLang(e.target.value as any);
-              }}
-            >
-              {AllLangs.map((lang) => (
-                <option value={lang} key={lang}>
-                  {ALL_LANG_OPTIONS[lang]}
-                </option>
-              ))}
-            </Select>
-          </ListItem>
-
           <ListItem
             title={Locale.Settings.FontSize.Title}
             subTitle={Locale.Settings.FontSize.SubTitle}
@@ -1508,23 +1490,6 @@ export function Settings(props: { presentation?: "page" | "sheet" } = {}) {
               ></input>
             </ListItem>
           )}
-
-          <ListItem
-            title={Locale.Settings.AutoGenerateTitle.Title}
-            subTitle={Locale.Settings.AutoGenerateTitle.SubTitle}
-          >
-            <input
-              aria-label={Locale.Settings.AutoGenerateTitle.Title}
-              type="checkbox"
-              checked={config.enableAutoGenerateTitle}
-              onChange={(e) =>
-                updateConfig(
-                  (config) =>
-                    (config.enableAutoGenerateTitle = e.currentTarget.checked),
-                )
-              }
-            ></input>
-          </ListItem>
 
           {showLegacySettings && (
             <>

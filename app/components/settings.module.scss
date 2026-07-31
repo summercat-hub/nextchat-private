@@ -30,6 +30,20 @@
   letter-spacing: 0.015em;
 }
 
+.access-code-item {
+  > div:first-child {
+    flex: 0 0 auto;
+    min-width: max-content;
+    white-space: nowrap;
+  }
+
+  > :global(.password-input-container) {
+    width: min(100%, 160px);
+    min-width: 0;
+    flex: 0 1 160px;
+  }
+}
+
 .theme-selector {
   display: inline-flex;
   gap: 2px;
