@@ -275,9 +275,9 @@
 
         &:focus {
           background-color: var(--white);
-          border-color: var(--primary);
+          border-color: var(--gray-300);
           outline: none;
-          box-shadow: 0 0 0 2px var(--primary-10);
+          box-shadow: none;
         }
 
         &::placeholder {
@@ -343,9 +343,9 @@
         }
 
         &:focus {
-          border-color: var(--primary);
+          border-color: var(--gray-300);
           outline: none;
-          box-shadow: 0 0 0 2px var(--primary-10);
+          box-shadow: none;
         }
       }
 
@@ -474,9 +474,9 @@
 
           &:focus {
             background-color: var(--white);
-            border-color: var(--primary);
+            border-color: var(--gray-300);
             outline: none;
-            box-shadow: 0 0 0 2px var(--primary-10);
+            box-shadow: none;
           }
 
           &::placeholder {
@@ -557,9 +557,9 @@
       }
 
       &:focus {
-        border-color: var(--primary);
+        border-color: var(--gray-300);
         outline: none;
-        box-shadow: 0 0 0 2px var(--primary-10);
+        box-shadow: none;
       }
 
       &::placeholder {

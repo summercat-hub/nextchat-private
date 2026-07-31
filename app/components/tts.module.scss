@@ -25,7 +25,7 @@
       }
 
       .search-bar:focus {
-        border: 1px solid var(--primary);
+        border: var(--border-in-light);
       }
 
       .plugin-filter-lang {

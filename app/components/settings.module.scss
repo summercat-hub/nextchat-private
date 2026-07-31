@@ -113,9 +113,14 @@
     transition: transform var(--motion-normal) var(--ease-out);
   }
 
-  &:hover,
+  @media (hover: hover) {
+    &:hover {
+      background: var(--hover-color);
+    }
+  }
+
   &:focus-visible {
-    background: var(--hover-color);
+    background: transparent;
   }
 }
 

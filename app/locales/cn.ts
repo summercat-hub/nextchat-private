@@ -160,13 +160,13 @@ const cn = {
         Title: "重置所有设置",
         SubTitle: "重置所有设置项回默认值",
         Action: "立即重置",
-        Confirm: "确认重置所有设置？",
+        Confirm: "是否确认重置所有设置项到默认值？",
       },
       Clear: {
         Title: "清除所有数据",
         SubTitle: "清除所有聊天、设置数据",
         Action: "立即清除",
-        Confirm: "确认清除所有聊天、设置数据？",
+        Confirm: "是否确认清除所有聊天、设置数据？",
       },
     },
     Lang: {

@@ -35,7 +35,12 @@
       fill: currentColor !important;
     }
 
-    &:hover,
+    @media (hover: hover) {
+      &:hover {
+        background-color: var(--action-primary-hover);
+      }
+    }
+
     &:focus-visible {
       background-color: var(--action-primary-hover);
     }
@@ -56,10 +61,16 @@
     }
   }
 
-  &:not(.primary):hover,
+  @media (hover: hover) {
+    &:not(.primary):hover {
+      border-color: var(--primary);
+      background-color: var(--hover-color);
+    }
+  }
+
   &:not(.primary):focus-visible {
-    border-color: var(--primary);
-    background-color: var(--hover-color);
+    border-color: transparent;
+    background-color: transparent;
   }
 
   &:active:not([disabled]) {

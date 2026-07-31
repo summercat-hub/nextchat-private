@@ -196,8 +196,8 @@ export function ChatList(props: { narrow?: boolean }) {
                 index={i}
                 selected={i === selectedIndex}
                 onClick={() => {
-                  navigate(Path.Chat);
                   selectSession(i);
+                  navigate(Path.Chat);
                 }}
                 onDelete={async () => {
                   if (await showConfirm(Locale.Home.DeleteChat)) {

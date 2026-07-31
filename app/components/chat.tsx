@@ -584,13 +584,19 @@ const INTELLIGENCE_OPTIONS = [
   },
 ] as const;
 
-function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
+function IntelligenceSelector(props: {
+  visible: boolean;
+  disabled: boolean;
+  keepInputFocused?: () => void;
+}) {
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
   const selectorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const openFromKeyboard = useRef(false);
+  const keyboardActivation = useRef(false);
   const currentModel = session.mask.modelConfig.model;
   const currentReasoningEffort =
     session.mask.modelConfig.reasoning_effort ?? "none";
@@ -606,8 +612,8 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
     currentLevel === "low" ? "低" : currentLevel === "high" ? "高" : "中";
 
   useEffect(() => {
-    if (!props.visible || props.disabled) setOpen(false);
-  }, [props.disabled, props.visible]);
+    if (props.disabled) setOpen(false);
+  }, [props.disabled]);
 
   useEffect(() => {
     if (!open) return;
@@ -625,6 +631,7 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
 
   useEffect(() => {
     if (!open) return;
+    if (!openFromKeyboard.current) return;
     const frame = window.requestAnimationFrame(() => {
       menuRef.current
         ?.querySelector<HTMLButtonElement>('[aria-checked="true"]')
@@ -666,7 +673,7 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
     options[nextIndex]?.focus({ preventScroll: true });
   };
 
-  if (!props.visible) return null;
+  if (!props.visible && !open) return null;
 
   return (
     <div className={styles["chat-intelligence-layer"]}>
@@ -685,13 +692,33 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
           aria-haspopup="menu"
           aria-expanded={open}
           disabled={props.disabled}
-          onPointerDown={(event) => event.preventDefault()}
-          onClick={() => setOpen((value) => !value)}
+          onPointerDown={(event) => {
+            keyboardActivation.current = false;
+            event.preventDefault();
+            props.keepInputFocused?.();
+          }}
           onKeyDown={(event) => {
             if (event.key === "ArrowDown" || event.key === "ArrowUp") {
               event.preventDefault();
+              openFromKeyboard.current = true;
               setOpen(true);
+              return;
             }
+            if (event.key === "Enter" || event.key === " ") {
+              keyboardActivation.current = true;
+            }
+            if (event.key === "Escape" && open) {
+              event.preventDefault();
+              setOpen(false);
+              props.keepInputFocused?.();
+            }
+          }}
+          onClick={() => {
+            const shouldFocusMenu = keyboardActivation.current;
+            keyboardActivation.current = false;
+            openFromKeyboard.current = shouldFocusMenu;
+            setOpen((value) => !value);
+            if (!shouldFocusMenu) props.keepInputFocused?.();
           }}
         >
           <span>{currentLabel}</span>
@@ -732,6 +759,7 @@ function IntelligenceSelector(props: { visible: boolean; disabled: boolean }) {
                       modelConfig.service_tier = "default";
                     });
                     setOpen(false);
+                    props.keepInputFocused?.();
                   }}
                 >
                   <span>{option.label}</span>
@@ -2206,11 +2234,12 @@ function _Chat() {
                   className={styles["chat-header-icon-button"]}
                   title={Locale.Chat.Actions.ChatList}
                   aria={Locale.Chat.Actions.ChatList}
-                  onClick={() =>
+                  onClick={() => {
                     window.dispatchEvent(
                       new CustomEvent("nextchat:open-mobile-drawer"),
-                    )
-                  }
+                    );
+                    (document.activeElement as HTMLElement | null)?.blur();
+                  }}
                 />
               </div>
             </div>
@@ -2544,6 +2573,9 @@ function _Chat() {
               <IntelligenceSelector
                 visible={inputExpanded}
                 disabled={isLoading || isVoiceActive}
+                keepInputFocused={() =>
+                  inputRef.current?.focus({ preventScroll: true })
+                }
               />
               <div
                 className={clsx(styles["chat-input-panel-inner"], {

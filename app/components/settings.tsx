@@ -83,10 +83,7 @@ function DangerItems() {
 
   return (
     <List>
-      <ListItem
-        title={Locale.Settings.Danger.Reset.Title}
-        subTitle={Locale.Settings.Danger.Reset.SubTitle}
-      >
+      <ListItem title={Locale.Settings.Danger.Reset.Title}>
         <IconButton
           aria={Locale.Settings.Danger.Reset.Title}
           text={Locale.Settings.Danger.Reset.Action}
@@ -98,10 +95,7 @@ function DangerItems() {
           type="danger"
         />
       </ListItem>
-      <ListItem
-        title={Locale.Settings.Danger.Clear.Title}
-        subTitle={Locale.Settings.Danger.Clear.SubTitle}
-      >
+      <ListItem title={Locale.Settings.Danger.Clear.Title}>
         <IconButton
           aria={Locale.Settings.Danger.Clear.Title}
           text={Locale.Settings.Danger.Clear.Action}
@@ -523,10 +517,7 @@ export function Settings(props: { presentation?: "page" | "sheet" } = {}) {
   const showAccessCode = enabledAccessControl && !clientConfig?.isApp;
 
   const accessCodeComponent = showAccessCode && (
-    <ListItem
-      title={Locale.Settings.Access.AccessCode.Title}
-      subTitle={Locale.Settings.Access.AccessCode.SubTitle}
-    >
+    <ListItem title={Locale.Settings.Access.AccessCode.Title}>
       <PasswordInput
         value={accessStore.accessCode}
         type="text"
@@ -1428,7 +1419,7 @@ export function Settings(props: { presentation?: "page" | "sheet" } = {}) {
             </>
           )}
 
-          <ListItem title="主题" subTitle="选择界面的明暗外观">
+          <ListItem title="主题">
             <div
               className={styles["theme-selector"]}
               role="group"
