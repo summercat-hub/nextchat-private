@@ -73,6 +73,11 @@ export interface RequestPayload {
     enabled: boolean;
     effort?: "low" | "medium" | "high" | "xhigh";
   };
+  tools?: Array<{
+    type: string;
+    parameters?: Record<string, unknown>;
+    [key: string]: unknown;
+  }>;
   service_tier?: "default" | "priority" | "flex";
   stream_options?: {
     include_usage: boolean;
@@ -221,6 +226,17 @@ export class ChatGPTApi implements LLMApi {
     const reasoningEnabled =
       (isGemma4 || isPrivateGpt56Luna) && !!activeReasoningEffort;
     const requestedServiceTier = modelConfig.service_tier ?? "default";
+    const nativeWebSearchTools = isPrivateGpt56Luna
+      ? [
+          {
+            type: "openrouter:web_search",
+            parameters: {
+              engine: "native",
+              max_total_results: 8,
+            },
+          },
+        ]
+      : [];
     if (isDalle3) {
       const prompt = getMessageTextContent(
         options.messages.slice(-1)?.pop() as any,
@@ -276,6 +292,8 @@ export class ChatGPTApi implements LLMApi {
               effort: reasoningEnabled ? activeReasoningEffort : undefined,
             }
           : undefined,
+        tools:
+          nativeWebSearchTools.length > 0 ? nativeWebSearchTools : undefined,
         service_tier:
           isGemma4 && requestedServiceTier !== "default"
             ? requestedServiceTier
@@ -325,10 +343,27 @@ export class ChatGPTApi implements LLMApi {
           completion_tokens?: number;
           total_tokens?: number;
           prompt_tokens_details?: { cached_tokens?: number };
+          completion_tokens_details?: { reasoning_tokens?: number };
+          server_tool_use?: { web_search_requests?: number };
         }
       | undefined;
     let estimatedCost: number | undefined;
     let confirmedServiceTier: string | undefined;
+    let responseModel: string | undefined;
+    let generationId: string | undefined;
+    let routerMetadata:
+      | {
+          requested?: string;
+          strategy?: string;
+          summary?: string;
+          attempts?: Array<{
+            provider?: string;
+            model?: string;
+            status?: number;
+          }>;
+          pipeline?: Array<{ type?: string; name?: string }>;
+        }
+      | undefined;
 
     const elapsedMs = (timestamp?: number) =>
       timestamp == null ? undefined : timestamp - requestStartedAt;
@@ -363,7 +398,9 @@ export class ChatGPTApi implements LLMApi {
         topP: "top_p" in requestPayload ? requestPayload.top_p : undefined,
         topK: "top_k" in requestPayload ? requestPayload.top_k : undefined,
         maxTokens:
-          "max_tokens" in requestPayload
+          "max_completion_tokens" in requestPayload
+            ? requestPayload.max_completion_tokens
+            : "max_tokens" in requestPayload
             ? requestPayload.max_tokens
             : undefined,
         timeToStreamOpenMs: elapsedMs(streamOpenedAt),
@@ -376,8 +413,19 @@ export class ChatGPTApi implements LLMApi {
         totalDurationMs: finishedAt - requestStartedAt,
         promptTokens: responseUsage?.prompt_tokens,
         completionTokens: responseUsage?.completion_tokens,
+        reasoningTokens:
+          responseUsage?.completion_tokens_details?.reasoning_tokens,
         totalTokens: responseUsage?.total_tokens,
         cachedPromptTokens: responseUsage?.prompt_tokens_details?.cached_tokens,
+        responseModel,
+        generationId,
+        openrouterRequestedModel: routerMetadata?.requested,
+        openrouterRoutingStrategy: routerMetadata?.strategy,
+        openrouterRoutingSummary: routerMetadata?.summary,
+        openrouterAttempts: routerMetadata?.attempts,
+        openrouterPipeline: routerMetadata?.pipeline,
+        webSearchRequests:
+          responseUsage?.server_tool_use?.web_search_requests,
         estimatedCost,
       });
     };
@@ -408,7 +456,9 @@ export class ChatGPTApi implements LLMApi {
     options.onController?.(controller);
     const requestHeaders = {
       ...getHeaders(),
-      "x-nextchat-web-search": "1",
+      ...(isPrivateGpt56Luna && {
+        "X-OpenRouter-Metadata": "enabled",
+      }),
     };
 
     try {
@@ -445,23 +495,29 @@ export class ChatGPTApi implements LLMApi {
       }
       if (shouldStream) {
         let index = -1;
-        const [tools, funcs] = usePluginStore
+        const [pluginTools, funcs] = usePluginStore
           .getState()
           .getAsTools(
             useChatStore.getState().currentSession().mask?.plugin || [],
           );
-        // console.log("getAsTools", tools, funcs);
+        const requestTools = [
+          ...nativeWebSearchTools,
+          ...(Array.isArray(pluginTools) ? pluginTools : []),
+        ];
+        // console.log("getAsTools", pluginTools, funcs);
         streamWithThink(
           chatPath,
           requestPayload,
           requestHeaders,
-          tools as any,
+          requestTools as any,
           funcs,
           controller,
           // parseSSE
           (text: string, runTools: ChatMessageTool[]) => {
             // console.log("parseSSE", text, runTools);
             const json = JSON.parse(text);
+            responseModel = json.model ?? responseModel;
+            routerMetadata = json.openrouter_metadata ?? routerMetadata;
             responseUsage = json.usage ?? responseUsage;
             estimatedCost =
               json.estimated_cost ??
@@ -564,6 +620,8 @@ export class ChatGPTApi implements LLMApi {
             onStreamOpen(response: Response) {
               if (streamOpenedAt) return;
               streamOpenedAt = Date.now();
+              generationId =
+                response.headers.get("x-generation-id") ?? undefined;
               logTimingMilestone("stream_open", streamOpenedAt, {
                 status: response.status,
                 contentType: response.headers.get("content-type"),
@@ -622,6 +680,9 @@ export class ChatGPTApi implements LLMApi {
         clearTimeout(requestTimeoutId);
 
         const resJson = await res.json();
+        responseModel = resJson.model ?? responseModel;
+        routerMetadata = resJson.openrouter_metadata ?? routerMetadata;
+        generationId = res.headers.get("x-generation-id") ?? undefined;
         responseUsage = resJson.usage ?? responseUsage;
         estimatedCost =
           resJson.estimated_cost ??

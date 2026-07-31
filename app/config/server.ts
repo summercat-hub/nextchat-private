@@ -106,12 +106,6 @@ declare global {
       CLOUDFLARE_API_TOKEN?: string;
       CLOUDFLARE_ACCOUNT_ID?: string;
 
-      // Tavily search integration
-      TAVILY_API_KEY?: string;
-      WEB_SEARCH_ROUTER_MODEL?: string;
-      WEB_SEARCH_ROUTER_BASE_URL?: string;
-      WEB_SEARCH_ROUTER_API_KEY?: string;
-      WEB_SEARCH_TIME_ZONE?: string;
     }
   }
 }
@@ -197,9 +191,6 @@ export const getServerSideConfig = () => {
   const openaiApiKey = getApiKey(
     process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
   );
-  const webSearchRouterApiKey =
-    getApiKey(process.env.WEB_SEARCH_ROUTER_API_KEY) || openaiApiKey;
-
   return {
     baseUrl:
       process.env.BASE_URL ||
@@ -277,12 +268,6 @@ export const getServerSideConfig = () => {
     isAI302,
     ai302Url: process.env.AI302_URL,
     ai302ApiKey: getApiKey(process.env.AI302_API_KEY),
-
-    tavilyApiKey: getApiKey(process.env.TAVILY_API_KEY),
-    webSearchRouterModel: process.env.WEB_SEARCH_ROUTER_MODEL,
-    webSearchRouterBaseUrl: process.env.WEB_SEARCH_ROUTER_BASE_URL,
-    webSearchRouterApiKey,
-    webSearchTimeZone: process.env.WEB_SEARCH_TIME_ZONE || "Asia/Shanghai",
 
     gtmId: process.env.GTM_ID,
     gaId: process.env.GA_ID || DEFAULT_GA_ID,
