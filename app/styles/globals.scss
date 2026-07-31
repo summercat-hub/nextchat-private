@@ -19,6 +19,10 @@
   --action-primary: rgb(17, 17, 17);
   --action-primary-hover: rgb(42, 42, 42);
   --action-primary-foreground: rgb(255, 255, 255);
+  --sidebar-selected-surface: rgb(232, 234, 236);
+  --sidebar-primary-action-surface: var(--action-primary);
+  --sidebar-primary-action-hover-surface: var(--action-primary-hover);
+  --sidebar-primary-action-foreground: var(--action-primary-foreground);
   --second: rgb(242, 242, 242);
   --surface-primary: rgb(255, 255, 255);
   --surface-secondary: rgb(255, 255, 255);
@@ -68,6 +72,10 @@
   --action-primary: rgb(242, 242, 247);
   --action-primary-hover: rgb(220, 220, 225);
   --action-primary-foreground: rgb(16, 16, 18);
+  --sidebar-selected-surface: rgb(46, 46, 49);
+  --sidebar-primary-action-surface: rgb(46, 46, 49);
+  --sidebar-primary-action-hover-surface: rgb(58, 58, 62);
+  --sidebar-primary-action-foreground: var(--text-primary);
   --second: rgb(42, 42, 45);
   --surface-primary: rgb(30, 30, 32);
   --surface-secondary: rgb(18, 18, 20);

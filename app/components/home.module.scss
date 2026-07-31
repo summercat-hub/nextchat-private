@@ -413,11 +413,7 @@
 }
 
 .chat-item-selected {
-  background-color: rgb(232, 234, 236);
-}
-
-:global(.dark) .chat-item-selected {
-  background-color: rgb(58, 58, 62);
+  background-color: var(--sidebar-selected-surface);
 }
 
 .chat-item-title {
@@ -590,8 +586,8 @@
   min-height: 48px;
   padding: 0 12px;
   border-radius: 999px;
-  background-color: var(--action-primary);
-  color: var(--action-primary-foreground);
+  background-color: var(--sidebar-primary-action-surface);
+  color: var(--sidebar-primary-action-foreground);
   box-shadow: var(--control-shadow);
 
   > div:first-child {
@@ -612,12 +608,12 @@
 
   @media (hover: hover) {
     &:hover {
-      background-color: var(--action-primary-hover);
+      background-color: var(--sidebar-primary-action-hover-surface);
     }
   }
 
   &:focus-visible {
-    background-color: var(--action-primary);
+    background-color: var(--sidebar-primary-action-surface);
   }
 }
 

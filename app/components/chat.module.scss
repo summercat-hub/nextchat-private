@@ -649,17 +649,19 @@
 .chat-header-menu-item {
   width: 100%;
   min-height: 44px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 10px !important;
   justify-content: flex-start !important;
-  padding: 4px 8px !important;
+  padding: 3px 8px !important;
   border: 0 !important;
   border-radius: 10px !important;
   background: transparent !important;
   box-shadow: none !important;
 
   > div:first-child {
+    box-sizing: border-box;
     width: 38px !important;
     height: 38px !important;
     flex: 0 0 38px;
@@ -667,18 +669,38 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgb(242, 242, 247) !important;
-    color: var(--text-secondary);
+    align-self: center;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: var(--second) !important;
+    color: var(--text-primary);
   }
 
   > div:first-child svg {
+    display: block;
+    flex: 0 0 20px;
     width: 20px;
     height: 20px;
+    margin: 0;
+  }
+
+  > div:first-child svg *[stroke="#333"],
+  > div:first-child svg *[style*="stroke:#333"] {
+    stroke: currentColor !important;
+  }
+
+  > div:first-child svg *[fill="#333"],
+  > div:first-child svg *[style*="fill:#333"] {
+    fill: currentColor !important;
   }
 
   > div:last-child {
+    align-self: center;
+    flex: 1 1 auto;
+    min-width: 0;
     margin-left: 0 !important;
     font-size: 16px;
+    line-height: 1.25;
   }
 
   @media (hover: hover) {
@@ -690,10 +712,6 @@
   &:focus-visible {
     background: transparent !important;
   }
-}
-
-:global(.dark) .chat-header-menu-item > div:first-child {
-  background: rgb(58, 58, 62) !important;
 }
 
 @media only screen and (max-width: 860px) {
