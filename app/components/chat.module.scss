@@ -814,6 +814,17 @@
   align-items: flex-end;
 }
 
+.rename-topic-input[type="text"] {
+  width: 100%;
+  max-width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
 @media only screen and (max-width: 640px) {
   .chat-message-actions {
     opacity: 0.72;
@@ -1373,7 +1384,7 @@
   max-height: min(38vh, 220px);
   flex: 0 1 auto;
   border-radius: 0;
-  padding: 11px 16px 7px 18px;
+  padding: 14px 16px 4px 18px;
 }
 
 .chat-input-toolbar {
@@ -1647,7 +1658,7 @@
   .chat-input-panel-inner-expanded .chat-input {
     min-height: 44px;
     max-height: min(36vh, 210px);
-    padding: 11px 15px 7px 16px;
+    padding: 14px 15px 4px 16px;
   }
 
   .chat-input-panel-inner-expanded .chat-input-toolbar {

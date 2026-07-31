@@ -21,15 +21,12 @@ import {
 
 import CopyIcon from "../icons/copy.svg";
 import LoadingIcon from "../icons/three-dots.svg";
-import ChatGptIcon from "../icons/chatgpt.png";
 import ShareIcon from "../icons/share.svg";
 
 import DownloadIcon from "../icons/download.svg";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageSelector, useMessageSelector } from "./message-selector";
-import { Avatar } from "./emoji";
 import dynamic from "next/dynamic";
-import NextImage from "next/image";
 
 import { toBlob, toPng } from "html-to-image";
 
@@ -38,7 +35,6 @@ import { EXPORT_MESSAGE_CLASS_NAME } from "../constant";
 import { getClientConfig } from "../config/client";
 import { type ClientApi, getClientApi } from "../client/api";
 import { getMessageTextContent } from "../utils";
-import { MaskAvatar } from "./mask";
 import clsx from "clsx";
 
 const Markdown = dynamic(async () => (await import("./markdown")).Markdown, {
@@ -410,9 +406,6 @@ export function ImagePreviewer(props: {
   messages: ChatMessage[];
   topic: string;
 }) {
-  const chatStore = useChatStore();
-  const session = chatStore.currentSession();
-  const mask = session.mask;
   const config = useAppConfig();
 
   const previewRef = useRef<HTMLDivElement>(null);
@@ -514,38 +507,15 @@ export function ImagePreviewer(props: {
         ref={previewRef}
       >
         <div className={styles["chat-info"]}>
-          <div className={clsx(styles["logo"], "no-dark")}>
-            <NextImage
-              src={ChatGptIcon.src}
-              alt="logo"
-              width={50}
-              height={50}
-            />
-          </div>
-
           <div>
-            <div className={styles["main-title"]}>NextChat</div>
-            <div className={styles["sub-title"]}>
-              github.com/ChatGPTNextWeb/ChatGPT-Next-Web
-            </div>
-            <div className={styles["icons"]}>
-              <MaskAvatar avatar={config.avatar} />
-              <span className={styles["icon-space"]}>&</span>
-              <MaskAvatar
-                avatar={mask.avatar}
-                model={session.mask.modelConfig.model}
-              />
-            </div>
+            <div className={styles["main-title"]}>Open Chat</div>
           </div>
           <div>
-            <div className={styles["chat-info-item"]}>
-              {Locale.Exporter.Model}: {mask.modelConfig.model}
-            </div>
             <div className={styles["chat-info-item"]}>
               {Locale.Exporter.Messages}: {props.messages.length}
             </div>
             <div className={styles["chat-info-item"]}>
-              {Locale.Exporter.Topic}: {session.topic}
+              {Locale.Exporter.Topic}: {props.topic}
             </div>
             <div className={styles["chat-info-item"]}>
               {Locale.Exporter.Time}:{" "}
@@ -561,17 +531,6 @@ export function ImagePreviewer(props: {
               className={clsx(styles["message"], styles["message-" + m.role])}
               key={i}
             >
-              <div className={styles["avatar"]}>
-                {m.role === "user" ? (
-                  <Avatar avatar={config.avatar}></Avatar>
-                ) : (
-                  <MaskAvatar
-                    avatar={session.mask.avatar}
-                    model={m.model || session.mask.modelConfig.model}
-                  />
-                )}
-              </div>
-
               <div className={styles["body"]}>
                 <Markdown
                   content={getMessageTextContent(m)}

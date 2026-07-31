@@ -85,7 +85,6 @@ import {
   ServiceProvider,
   UNFINISHED_INPUT,
 } from "../constant";
-import { ContextPrompts } from "./mask";
 import { ModelConfigList } from "./model-config";
 import { ChatCommandPrefix, useChatCommand, useCommand } from "../command";
 import { prettyObject } from "../utils/format";
@@ -990,12 +989,12 @@ export function ChatActions(props: {
 export function EditMessageModal(props: { onClose: () => void }) {
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
-  const [messages, setMessages] = useState(session.messages.slice());
+  const [topic, setTopic] = useState(session.topic);
 
   return (
     <div className="modal-mask">
       <Modal
-        title={Locale.Chat.EditMessage.Title}
+        title={Locale.Chat.Rename}
         onClose={props.onClose}
         actions={[
           <IconButton
@@ -1014,37 +1013,19 @@ export function EditMessageModal(props: { onClose: () => void }) {
             onClick={() => {
               chatStore.updateTargetSession(
                 session,
-                (session) => (session.messages = messages),
+                (session) => (session.topic = topic.trim() || DEFAULT_TOPIC),
               );
               props.onClose();
             }}
           />,
         ]}
       >
-        <List>
-          <ListItem
-            title={Locale.Chat.EditMessage.Topic.Title}
-            subTitle={Locale.Chat.EditMessage.Topic.SubTitle}
-          >
-            <input
-              type="text"
-              value={session.topic}
-              onInput={(e) =>
-                chatStore.updateTargetSession(
-                  session,
-                  (session) => (session.topic = e.currentTarget.value),
-                )
-              }
-            ></input>
-          </ListItem>
-        </List>
-        <ContextPrompts
-          context={messages}
-          updateContext={(updater) => {
-            const newMessages = messages.slice();
-            updater(newMessages);
-            setMessages(newMessages);
-          }}
+        <input
+          className={styles["rename-topic-input"]}
+          type="text"
+          value={topic}
+          autoFocus
+          onChange={(event) => setTopic(event.currentTarget.value)}
         />
       </Modal>
     </div>
