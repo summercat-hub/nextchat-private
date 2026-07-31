@@ -20,6 +20,7 @@ import { getCSSVar, useMobileScreen } from "../utils";
 import dynamic from "next/dynamic";
 import { Path, SlotID } from "../constant";
 import { ErrorBoundary } from "./error";
+import { UpdateNotice } from "./update-notice";
 
 import { getISOLang, getLang } from "../locales";
 
@@ -763,27 +764,30 @@ function Screen() {
   };
 
   return (
-    <div
-      ref={containerRef}
-      className={clsx(styles.container, {
-        [styles["tight-container"]]: shouldTightBorder,
-        [styles["rtl-screen"]]: getLang() === "ar",
-        [styles["drawer-dragging"]]: isDrawerDragging,
-        [styles["drawer-settling"]]: isDrawerSettling,
-      })}
-      style={
-        isMobileScreen
-          ? ({
-              "--drawer-offset": `${drawerOffset}px`,
-              "--drawer-progress": drawerProgress.toFixed(4),
-              "--drawer-inverse-progress": drawerInverseProgress.toFixed(4),
-            } as CSSProperties)
-          : undefined
-      }
-      onClickCapture={handleContainerClickCapture}
-    >
-      {renderContent()}
-    </div>
+    <>
+      <div
+        ref={containerRef}
+        className={clsx(styles.container, {
+          [styles["tight-container"]]: shouldTightBorder,
+          [styles["rtl-screen"]]: getLang() === "ar",
+          [styles["drawer-dragging"]]: isDrawerDragging,
+          [styles["drawer-settling"]]: isDrawerSettling,
+        })}
+        style={
+          isMobileScreen
+            ? ({
+                "--drawer-offset": `${drawerOffset}px`,
+                "--drawer-progress": drawerProgress.toFixed(4),
+                "--drawer-inverse-progress": drawerInverseProgress.toFixed(4),
+              } as CSSProperties)
+            : undefined
+        }
+        onClickCapture={handleContainerClickCapture}
+      >
+        {renderContent()}
+      </div>
+      {!isAuth && <UpdateNotice />}
+    </>
   );
 }
 
