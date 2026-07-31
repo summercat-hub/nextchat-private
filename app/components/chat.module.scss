@@ -1004,20 +1004,6 @@
   }
 }
 
-.chat-message-action-date {
-  font-size: 12px;
-  opacity: 0.2;
-  white-space: nowrap;
-  transition: opacity var(--motion-fast) var(--ease-out);
-  color: var(--text-secondary);
-  text-align: right;
-  width: 100%;
-  box-sizing: border-box;
-  padding-right: 10px;
-  pointer-events: none;
-  z-index: 1;
-}
-
 .chat-message:not(.chat-message-user)
   > .chat-message-container
   > .chat-message-item {
