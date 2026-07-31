@@ -142,29 +142,48 @@
   }
 
   .sidebar {
+    --drawer-foreground-strength: calc(
+      64% + var(--drawer-progress, 0) * 36%
+    );
+    --drawer-foreground-surface: var(--mobile-sidebar-surface);
+    --black: color-mix(
+      in srgb,
+      var(--text-primary-base) var(--drawer-foreground-strength),
+      var(--drawer-foreground-surface)
+    );
+    --text-primary: var(--black);
+    --text-secondary: color-mix(
+      in srgb,
+      var(--text-secondary-base) var(--drawer-foreground-strength),
+      var(--drawer-foreground-surface)
+    );
+    --text-tertiary: color-mix(
+      in srgb,
+      var(--text-tertiary-base) var(--drawer-foreground-strength),
+      var(--drawer-foreground-surface)
+    );
+    --action-primary: color-mix(
+      in srgb,
+      var(--action-primary-base) var(--drawer-foreground-strength),
+      var(--drawer-foreground-surface)
+    );
     position: absolute;
     top: 0;
     left: 0;
     z-index: 0;
     height: var(--full-height);
-    padding-top: calc(14px + env(safe-area-inset-top));
+    padding-top: calc(12px + env(safe-area-inset-top));
     padding-right: 16px;
     padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    padding-left: 16px;
+    padding-left: 12px;
     transform-origin: left center;
     transform: translate3d(
-        calc(var(--drawer-inverse-progress, 1) * -14px),
-        0,
-        0
-      )
-      scale(calc(0.965 + var(--drawer-progress, 0) * 0.035));
-    opacity: calc(0.72 + var(--drawer-progress, 0) * 0.28);
-    filter: blur(calc(var(--drawer-inverse-progress, 1) * 1.4px));
-    transition:
-      transform 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
-      opacity 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
-      filter 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
-    will-change: transform, opacity, filter;
+      calc(var(--drawer-inverse-progress, 1) * -14px),
+      0,
+      0
+    );
+    transition: transform 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
+    will-change: transform;
     background: var(--mobile-sidebar-surface);
     box-shadow: none;
     backdrop-filter: none;
@@ -173,7 +192,36 @@
     overscroll-behavior-x: none;
   }
 
+  .sidebar-header {
+    padding-top: 0;
+  }
+
   .window-content {
+    --drawer-foreground-strength: calc(
+      100% - var(--drawer-progress, 0) * 36%
+    );
+    --drawer-foreground-surface: var(--surface-primary);
+    --black: color-mix(
+      in srgb,
+      var(--text-primary-base) var(--drawer-foreground-strength),
+      var(--drawer-foreground-surface)
+    );
+    --text-primary: var(--black);
+    --text-secondary: color-mix(
+      in srgb,
+      var(--text-secondary-base) var(--drawer-foreground-strength),
+      var(--drawer-foreground-surface)
+    );
+    --text-tertiary: color-mix(
+      in srgb,
+      var(--text-tertiary-base) var(--drawer-foreground-strength),
+      var(--drawer-foreground-surface)
+    );
+    --action-primary: color-mix(
+      in srgb,
+      var(--action-primary-base) var(--drawer-foreground-strength),
+      var(--drawer-foreground-surface)
+    );
     position: relative;
     z-index: 1;
     isolation: isolate;
@@ -181,29 +229,14 @@
     height: var(--full-height);
     background: var(--surface-primary);
     transform: translate3d(var(--drawer-offset, 0), 0, 0);
-    filter: blur(calc(var(--drawer-progress, 0) * 0.4px));
     transition:
       transform 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
-      filter 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
       border-radius 260ms var(--ease-out),
       box-shadow 260ms var(--ease-out);
-    will-change: transform, filter;
+    will-change: transform;
     overflow: hidden;
     touch-action: pan-y pinch-zoom;
     overscroll-behavior-x: none;
-
-    &::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: 1000;
-      pointer-events: none;
-      border-radius: inherit;
-      background: rgb(128, 128, 128);
-      opacity: calc(var(--drawer-progress, 0) * 0.14);
-      transition: opacity 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
-      will-change: opacity;
-    }
   }
 
   .drawer-open {
@@ -218,29 +251,28 @@
     }
   }
 
-  .drawer-dragging .sidebar,
-  .drawer-dragging .window-content,
-  .drawer-dragging .window-content::after {
+  .drawer-dragging {
     transition: none !important;
   }
 
+  .drawer-dragging .sidebar,
+  .drawer-dragging .window-content {
+    transition: none !important;
+  }
+
+  .drawer-settling {
+    transition: --drawer-progress 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
+  }
+
   .drawer-settling .sidebar {
-    transition:
-      transform 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
-      opacity 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
-      filter 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
+    transition: transform 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
   }
 
   .drawer-settling .window-content {
     transition:
       transform 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
-      filter 340ms cubic-bezier(0.2, 0.72, 0.2, 1),
       border-radius 260ms var(--ease-out),
       box-shadow 260ms var(--ease-out);
-  }
-
-  .drawer-settling .window-content::after {
-    transition: opacity 340ms cubic-bezier(0.2, 0.72, 0.2, 1);
   }
 
   .sidebar-drag {
@@ -271,27 +303,21 @@
     .sidebar,
     .drawer-settling .sidebar {
       transform: none;
-      filter: none;
-      opacity: 1;
       transition: none !important;
     }
 
+    .drawer-settling,
     .window-content,
-    .window-content::after,
-    .drawer-settling .window-content,
-    .drawer-settling .window-content::after {
+    .drawer-settling .window-content {
       transition: none !important;
-    }
-
-    .window-content {
-      filter: none;
     }
   }
 
   @media (prefers-reduced-transparency: reduce) {
     .sidebar,
     .window-content {
-      filter: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
   }
 }
@@ -323,6 +349,12 @@
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.02em;
+}
+
+@media only screen and (max-width: 860px) {
+  .sidebar-title {
+    font-size: 24px;
+  }
 }
 
 .sidebar-sub-title {
@@ -395,7 +427,11 @@
 }
 
 .chat-item-selected {
-  background-color: var(--hover-color);
+  background-color: rgb(232, 234, 236);
+}
+
+:global(.dark) .chat-item-selected {
+  background-color: rgb(58, 58, 62);
 }
 
 .chat-item-title {
@@ -588,9 +624,14 @@
     stroke: currentColor !important;
   }
 
-  &:hover,
+  @media (hover: hover) {
+    &:hover {
+      background-color: var(--action-primary-hover);
+    }
+  }
+
   &:focus-visible {
-    background-color: var(--action-primary-hover);
+    background-color: var(--action-primary);
   }
 }
 

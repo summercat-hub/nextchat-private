@@ -1,13 +1,19 @@
 @import "./animation.scss";
 @import "./window.scss";
 
+@property --drawer-progress {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
 @mixin light {
   --theme: light;
 
   /* semantic color */
   --white: rgb(255, 255, 255);
   --black: rgb(29, 29, 31);
-  --gray: rgb(247, 248, 249);
+  --gray: rgb(255, 255, 255);
   --primary: rgb(0, 122, 255);
   --primary-foreground: rgb(255, 255, 255);
   --action-primary: rgb(17, 17, 17);
@@ -15,12 +21,16 @@
   --action-primary-foreground: rgb(255, 255, 255);
   --second: rgb(242, 242, 242);
   --surface-primary: rgb(255, 255, 255);
-  --surface-secondary: rgb(247, 248, 249);
+  --surface-secondary: rgb(255, 255, 255);
   --surface-elevated: rgba(255, 255, 255, 0.88);
   --surface-material: rgba(255, 255, 255, 0.72);
   --text-primary: rgb(29, 29, 31);
   --text-secondary: rgb(87, 87, 92);
   --text-tertiary: rgb(110, 110, 115);
+  --text-primary-base: rgb(29, 29, 31);
+  --text-secondary-base: rgb(87, 87, 92);
+  --text-tertiary-base: rgb(110, 110, 115);
+  --action-primary-base: rgb(17, 17, 17);
   --separator: rgba(60, 60, 67, 0.16);
   --scrim: rgba(0, 0, 0, 0.32);
   --hover-color: rgb(241, 243, 244);
@@ -32,8 +42,8 @@
   --control-border-hover: rgba(0, 122, 255, 0.42);
   --control-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   --control-shadow-hover: 0 5px 16px rgba(0, 0, 0, 0.12);
-  --sidebar-material: rgba(244, 244, 245, 0.9);
-  --mobile-sidebar-surface: rgb(247, 247, 248);
+  --sidebar-material: rgb(255, 255, 255);
+  --mobile-sidebar-surface: rgb(255, 255, 255);
   --material-highlight: rgba(255, 255, 255, 0.68);
   --chrome-shadow: rgba(0, 0, 0, 0.06);
 
@@ -66,6 +76,10 @@
   --text-primary: rgb(242, 242, 247);
   --text-secondary: rgb(190, 190, 197);
   --text-tertiary: rgb(154, 154, 162);
+  --text-primary-base: rgb(242, 242, 247);
+  --text-secondary-base: rgb(190, 190, 197);
+  --text-tertiary-base: rgb(154, 154, 162);
+  --action-primary-base: rgb(242, 242, 247);
   --separator: rgba(255, 255, 255, 0.16);
   --scrim: rgba(0, 0, 0, 0.5);
   --hover-color: rgb(46, 46, 49);
@@ -181,7 +195,7 @@ body {
   }
 
   *:focus-visible {
-    outline: 2px solid var(--primary);
+    outline: 2px solid color-mix(in srgb, var(--text-primary) 22%, transparent);
     outline-offset: 2px;
   }
 }
@@ -495,10 +509,10 @@ pre {
   cursor: pointer;
 
   &:hover {
-    filter: brightness(0.9);
+    filter: none;
   }
   &:focus {
-    filter: brightness(0.95);
+    filter: none;
   }
 }
 

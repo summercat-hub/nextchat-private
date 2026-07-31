@@ -110,7 +110,7 @@ export function useSwitchTheme() {
 
     if (config.theme === "auto") {
       metaDescriptionDark?.setAttribute("content", "#121214");
-      metaDescriptionLight?.setAttribute("content", "#f7f8f9");
+      metaDescriptionLight?.setAttribute("content", "#ffffff");
     } else {
       const themeColor = getCSSVar("--theme-color");
       metaDescriptionDark?.setAttribute("content", themeColor);
@@ -775,6 +775,15 @@ function Screen() {
   ) => {
     if (!isMobileScreen || !suppressDrawerClick.current) return;
 
+    const target = event.target;
+    if (
+      target instanceof Element &&
+      target.closest("[data-rfd-drag-handle-draggable-id]")
+    ) {
+      suppressDrawerClick.current = false;
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     suppressDrawerClick.current = false;
@@ -816,7 +825,6 @@ function Screen() {
           })}
           onClickCapture={handleDrawerClickCapture}
           aria-hidden={isDrawerOpen ? "true" : undefined}
-          {...((isDrawerOpen ? { inert: "" } : {}) as any)}
         >
           <Routes>
             <Route path={Path.Home} element={<Chat />} />
