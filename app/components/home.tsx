@@ -300,6 +300,7 @@ function Screen() {
   const isAuth = location.pathname === Path.Auth;
   const isSd = location.pathname === Path.Sd;
   const isSdNew = location.pathname === Path.SdNew;
+  const isSettings = location.pathname === Path.Settings;
 
   const isMobileScreen = useMobileScreen();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -359,7 +360,10 @@ function Screen() {
     }
 
     const maxDistance = getDrawerDistance();
-    if (location.pathname === Path.Home) {
+    if (
+      location.pathname === Path.Home ||
+      (isMobileScreen && location.pathname === Path.Settings)
+    ) {
       setIsDrawerOpen(true);
       setDrawerOffset(maxDistance);
     } else if (location.pathname !== Path.Chat) {
@@ -755,7 +759,10 @@ function Screen() {
             <Route path={Path.Plugins} element={<PluginPage />} />
             <Route path={Path.SearchChat} element={<SearchChat />} />
             <Route path={Path.Chat} element={<Chat />} />
-            <Route path={Path.Settings} element={<Settings />} />
+            <Route
+              path={Path.Settings}
+              element={isMobileScreen ? <Chat /> : <Settings />}
+            />
             <Route path={Path.McpMarket} element={<McpMarketPage />} />
           </Routes>
         </WindowContent>
@@ -786,6 +793,7 @@ function Screen() {
       >
         {renderContent()}
       </div>
+      {isMobileScreen && isSettings && <Settings presentation="sheet" />}
       {!isAuth && <UpdateNotice />}
     </>
   );

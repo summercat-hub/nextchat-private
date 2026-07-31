@@ -342,6 +342,21 @@
   }
 }
 
+.settings-sheet-modal {
+  @media screen and (max-width: 640px) {
+    height: 80vh;
+    max-height: 80vh;
+    min-height: 0;
+    display: flex;
+
+    .modal-content {
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: none;
+    }
+  }
+}
+
 .show {
   opacity: 1;
   transition:

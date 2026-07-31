@@ -194,6 +194,8 @@ interface ModalProps {
   showClose?: boolean;
   showMaximize?: boolean;
   closeOnEscape?: boolean;
+  className?: string;
+  style?: CSSProperties;
 }
 export function Modal(props: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
@@ -469,7 +471,7 @@ export function Modal(props: ModalProps) {
       aria-modal="true"
       aria-labelledby={titleId}
       tabIndex={-1}
-      className={clsx(styles["modal-container"], {
+      className={clsx(styles["modal-container"], props.className, {
         [styles["modal-container-max"]]: isMax,
         [styles["modal-container-dragging"]]: isSheetDragging,
         [styles["modal-container-centered"]]: isCentered,
@@ -477,10 +479,11 @@ export function Modal(props: ModalProps) {
       style={
         isMobileScreen
           ? ({
+              ...props.style,
               "--sheet-offset": `${sheetOffset}px`,
               "--sheet-opacity": `${Math.max(0.72, 1 - sheetOffset / 1200)}`,
             } as CSSProperties)
-          : undefined
+          : props.style
       }
     >
       {isMobileScreen && !isCentered && (

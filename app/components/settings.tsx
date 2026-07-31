@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 
 import styles from "./settings.module.scss";
+import uiLibStyles from "./ui-lib.module.scss";
 
 import ResetIcon from "../icons/reload.svg";
 import CloseIcon from "../icons/close.svg";
@@ -412,12 +413,15 @@ function SyncItems() {
   );
 }
 
-export function Settings() {
+export function Settings(
+  props: { presentation?: "page" | "sheet" } = {},
+) {
   const navigate = useNavigate();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const config = useAppConfig();
   const updateConfig = config.update;
   const showLegacySettings = false;
+  const isSheet = props.presentation === "sheet";
 
   const updateStore = useUpdateStore();
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -1301,31 +1305,8 @@ export function Settings() {
     </>
   );
 
-  return (
-    <ErrorBoundary>
-      <div className="window-header" data-tauri-drag-region>
-        <div className="window-header-title">
-          <div className="window-header-main-title">
-            {Locale.Settings.Title}
-          </div>
-          <div className="window-header-sub-title">
-            {Locale.Settings.SubTitle}
-          </div>
-        </div>
-        <div className="window-actions">
-          <div className="window-action-button"></div>
-          <div className="window-action-button"></div>
-          <div className="window-action-button">
-            <IconButton
-              aria={Locale.UI.Close}
-              icon={<CloseIcon />}
-              onClick={() => navigate(Path.Home)}
-              bordered
-            />
-          </div>
-        </div>
-      </div>
-      <div className={styles["settings"]}>
+  const settingsContent = (
+    <div className={styles["settings"]}>
         <List>
           {showLegacySettings && (
             <>
@@ -1446,47 +1427,45 @@ export function Settings() {
             </Select>
           </ListItem>
 
-          {showLegacySettings && (
-            <>
-              <ListItem
-                title={Locale.Settings.FontSize.Title}
-                subTitle={Locale.Settings.FontSize.SubTitle}
-              >
-                <InputRange
-                  aria={Locale.Settings.FontSize.Title}
-                  title={`${config.fontSize ?? 14}px`}
-                  value={config.fontSize}
-                  min="12"
-                  max="40"
-                  step="1"
-                  onChange={(e) =>
-                    updateConfig(
-                      (config) =>
-                        (config.fontSize = Number.parseInt(
-                          e.currentTarget.value,
-                        )),
-                    )
-                  }
-                ></InputRange>
-              </ListItem>
+          <ListItem
+            title={Locale.Settings.FontSize.Title}
+            subTitle={Locale.Settings.FontSize.SubTitle}
+          >
+            <InputRange
+              aria={Locale.Settings.FontSize.Title}
+              title={`${config.fontSize ?? 14}px`}
+              value={config.fontSize}
+              min="12"
+              max="40"
+              step="1"
+              onChange={(e) =>
+                updateConfig(
+                  (config) =>
+                    (config.fontSize = Number.parseInt(
+                      e.currentTarget.value,
+                    )),
+                )
+              }
+            ></InputRange>
+          </ListItem>
 
-              <ListItem
-                title={Locale.Settings.FontFamily.Title}
-                subTitle={Locale.Settings.FontFamily.SubTitle}
-              >
-                <input
-                  aria-label={Locale.Settings.FontFamily.Title}
-                  type="text"
-                  value={config.fontFamily}
-                  placeholder={Locale.Settings.FontFamily.Placeholder}
-                  onChange={(e) =>
-                    updateConfig(
-                      (config) => (config.fontFamily = e.currentTarget.value),
-                    )
-                  }
-                ></input>
-              </ListItem>
-            </>
+          {showLegacySettings && (
+            <ListItem
+              title={Locale.Settings.FontFamily.Title}
+              subTitle={Locale.Settings.FontFamily.SubTitle}
+            >
+              <input
+                aria-label={Locale.Settings.FontFamily.Title}
+                type="text"
+                value={config.fontFamily}
+                placeholder={Locale.Settings.FontFamily.Placeholder}
+                onChange={(e) =>
+                  updateConfig(
+                    (config) => (config.fontFamily = e.currentTarget.value),
+                  )
+                }
+              ></input>
+            </ListItem>
           )}
 
           <ListItem
@@ -1690,7 +1669,49 @@ export function Settings() {
           </details>
         )}
         <DangerItems />
-      </div>
+    </div>
+  );
+
+  return (
+    <ErrorBoundary>
+      {isSheet ? (
+        <div className="modal-mask">
+          <Modal
+            title={Locale.Settings.Title}
+            onClose={() => navigate(Path.Home)}
+            showMaximize={false}
+            className={uiLibStyles["settings-sheet-modal"]}
+          >
+            {settingsContent}
+          </Modal>
+        </div>
+      ) : (
+        <>
+          <div className="window-header" data-tauri-drag-region>
+            <div className="window-header-title">
+              <div className="window-header-main-title">
+                {Locale.Settings.Title}
+              </div>
+              <div className="window-header-sub-title">
+                {Locale.Settings.SubTitle}
+              </div>
+            </div>
+            <div className="window-actions">
+              <div className="window-action-button"></div>
+              <div className="window-action-button"></div>
+              <div className="window-action-button">
+                <IconButton
+                  aria={Locale.UI.Close}
+                  icon={<CloseIcon />}
+                  onClick={() => navigate(Path.Home)}
+                  bordered
+                />
+              </div>
+            </div>
+          </div>
+          {settingsContent}
+        </>
+      )}
     </ErrorBoundary>
   );
 }

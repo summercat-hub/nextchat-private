@@ -153,7 +153,10 @@ export function SideBarContainer(props: {
         const target = event.target;
         if (!(target instanceof Element)) return;
 
-        if (target.closest("button, a")) {
+        if (
+          target.closest("button, a") &&
+          !target.closest("[data-settings-action]")
+        ) {
           onMobileDismiss?.();
         }
       }}
@@ -304,7 +307,7 @@ export function SideBar(props: {
         }
         secondaryAction={
           <div className={styles["sidebar-action"]}>
-            <Link to={Path.Settings}>
+            <Link to={Path.Settings} data-settings-action="true">
               <IconButton
                 aria={Locale.Settings.Title}
                 icon={<GearIcon />}
