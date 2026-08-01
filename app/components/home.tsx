@@ -203,7 +203,14 @@ function shouldIgnoreDrawerGesture(
       ",",
     ),
   );
-  if (blockingSurface) return true;
+  const mobileSidebar = targetElement.closest("[data-mobile-sidebar]");
+  const isOpenMobileSidebar =
+    allowDrawerCloseGesture && blockingSurface === mobileSidebar;
+
+  // The mobile sidebar is itself a dialog for accessibility, but while it is
+  // open it is also the visible drawer surface. Keep nested dialogs/popovers
+  // blocking while allowing a left swipe that starts on the sidebar itself.
+  if (blockingSurface && !isOpenMobileSidebar) return true;
 
   // When the drawer is already open, the visible chat surface acts as a
   // dismissible foreground layer. A left swipe should work from anywhere on

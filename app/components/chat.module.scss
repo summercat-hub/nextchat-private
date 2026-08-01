@@ -647,6 +647,7 @@
 }
 
 .chat-header-menu-item {
+  --chat-header-menu-icon-color: var(--text-primary-base);
   width: 100%;
   min-height: 44px;
   box-sizing: border-box;
@@ -673,7 +674,7 @@
     margin: 0 !important;
     padding: 0 !important;
     background: var(--second) !important;
-    color: var(--text-primary);
+    color: var(--chat-header-menu-icon-color) !important;
   }
 
   > div:first-child svg {
@@ -683,6 +684,10 @@
     height: 20px;
     margin: 0;
     transform: translate(2px, 2px);
+  }
+
+  > div:first-child svg path {
+    stroke: currentColor !important;
   }
 
   > div:first-child svg *[stroke="#333"],
@@ -713,6 +718,20 @@
   &:focus-visible {
     background: transparent !important;
   }
+}
+
+@media (prefers-color-scheme: dark) {
+  .chat-header-menu-item {
+    --chat-header-menu-icon-color: rgba(255, 255, 255, 0.94);
+  }
+}
+
+:global(.light) .chat-header-menu-item {
+  --chat-header-menu-icon-color: rgba(18, 18, 20, 0.94);
+}
+
+:global(.dark) .chat-header-menu-item {
+  --chat-header-menu-icon-color: rgba(255, 255, 255, 0.94);
 }
 
 @media only screen and (max-width: 860px) {
@@ -757,6 +776,7 @@
 }
 
 .chat-input-action {
+  --chat-message-action-color: var(--text-secondary);
   width: 44px;
   height: 44px;
   padding: 0;
@@ -766,7 +786,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--chat-message-action-color);
   cursor: pointer;
   transition:
     transform var(--motion-press) ease-out,
@@ -798,6 +818,24 @@
     width: 16px;
     height: 16px;
   }
+
+  svg path {
+    stroke: currentColor !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .chat-input-action {
+    --chat-message-action-color: rgba(255, 255, 255, 0.94);
+  }
+}
+
+:global(.light) .chat-input-action {
+  --chat-message-action-color: rgba(18, 18, 20, 0.94);
+}
+
+:global(.dark) .chat-input-action {
+  --chat-message-action-color: rgba(255, 255, 255, 0.94);
 }
 
 .chat-message-actions {
@@ -900,6 +938,18 @@
   }
 
   .attach-image .attach-image-mask {
+    opacity: 1;
+  }
+}
+
+@media only screen and (max-width: 860px) and (prefers-color-scheme: dark) {
+  .chat-message-actions {
+    opacity: 1;
+  }
+}
+
+@media only screen and (max-width: 860px) {
+  :global(.dark) .chat-message-actions {
     opacity: 1;
   }
 }
