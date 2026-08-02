@@ -106,6 +106,85 @@ const Markdown = dynamic(async () => (await import("./markdown")).Markdown, {
   loading: () => <LoadingIcon />,
 });
 
+function ReasoningSummaryChevron({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg
+      className={clsx(
+        styles["chat-reasoning-summary-chevron"],
+        collapsed && styles["chat-reasoning-summary-chevron-collapsed"],
+      )}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function ReasoningSummary({ message }: { message: ChatMessage }) {
+  const chatStore = useChatStore();
+  const summary = message.reasoningSummary?.trim();
+
+  if (!summary) return null;
+
+  const collapsed = message.reasoningSummaryCollapsed === true;
+  const isThinking =
+    message.streaming === true &&
+    message.reasoningSummaryAutoCollapsed !== true;
+  const summaryId = `reasoning-summary-${message.id}`;
+
+  const toggleCollapsed = () => {
+    const session = chatStore.currentSession();
+    chatStore.updateTargetSession(session, (session) => {
+      const targetMessage = session.messages.find(
+        (currentMessage) => currentMessage.id === message.id,
+      );
+      if (!targetMessage) return;
+      targetMessage.reasoningSummaryCollapsed = !collapsed;
+      session.messages = session.messages.concat();
+    });
+  };
+
+  return (
+    <section className={styles["chat-reasoning-summary"]}>
+      <button
+        type="button"
+        className={styles["chat-reasoning-summary-toggle"]}
+        onClick={toggleCollapsed}
+        aria-expanded={!collapsed}
+        aria-controls={summaryId}
+        aria-label={`${collapsed ? "展开" : "折叠"}${
+          isThinking ? "正在思考" : "思考摘要"
+        }`}
+      >
+        <ReasoningSummaryChevron collapsed={collapsed} />
+        <span aria-live="polite">{isThinking ? "正在思考" : "思考摘要"}</span>
+        {isThinking && (
+          <span
+            className={styles["chat-reasoning-summary-loading"]}
+            aria-hidden="true"
+          >
+            <LoadingIcon />
+          </span>
+        )}
+      </button>
+      <div
+        id={summaryId}
+        className={clsx(
+          styles["chat-reasoning-summary-content"],
+          collapsed && styles["chat-reasoning-summary-content-collapsed"],
+        )}
+        aria-hidden={collapsed}
+      >
+        <div>
+          <Markdown content={summary} fontSize={14} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 const ExportMessageModal = dynamic(
   async () => (await import("./exporter")).ExportMessageModal,
   {
@@ -2370,9 +2449,12 @@ function _Chat() {
                       !(message.preview || message.content.length === 0) &&
                       !isContext;
                     const messageText = getMessageTextContent(message);
+                    const hasReasoningSummary =
+                      !!message.reasoningSummary?.trim();
                     const showWaiting =
-                      !!message.preview ||
-                      (!!message.streaming && messageText.length === 0);
+                      !hasReasoningSummary &&
+                      (!!message.preview ||
+                        (!!message.streaming && messageText.length === 0));
 
                     const shouldShowClearContextDivider =
                       i === clearContextIndex - 1;
@@ -2387,6 +2469,7 @@ function _Chat() {
                           }
                         >
                           <div className={styles["chat-message-container"]}>
+                            <ReasoningSummary message={message} />
                             {(message?.tools?.length ?? 0) === 0 &&
                               showWaiting && (
                                 <div

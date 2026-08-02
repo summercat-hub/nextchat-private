@@ -64,6 +64,9 @@ export type ChatMessage = RequestMessage & {
   date: string;
   streaming?: boolean;
   reasoning?: boolean;
+  reasoningSummary?: string;
+  reasoningSummaryCollapsed?: boolean;
+  reasoningSummaryAutoCollapsed?: boolean;
   isError?: boolean;
   id: string;
   model?: ModelType;
@@ -506,11 +509,33 @@ export const useChatStore = createPersistStore(
           messages: sendMessages,
           config: { ...modelConfig, stream: true },
           enableWebSearch: useAppConfig.getState().enableWebSearch,
-          onUpdate(message) {
+          onUpdate(message, chunk) {
             botMessage.streaming = true;
             if (message) {
               botMessage.content = message;
             }
+            if (chunk?.trim?.() && !botMessage.reasoningSummaryAutoCollapsed) {
+              botMessage.reasoningSummaryCollapsed = true;
+              botMessage.reasoningSummaryAutoCollapsed = true;
+            }
+            get().updateTargetSession(session, (session) => {
+              session.messages = session.messages.concat();
+            });
+          },
+          onVisibleText(chunk) {
+            if (!chunk?.trim() || botMessage.reasoningSummaryAutoCollapsed) {
+              return;
+            }
+            botMessage.reasoningSummaryCollapsed = true;
+            botMessage.reasoningSummaryAutoCollapsed = true;
+            get().updateTargetSession(session, (session) => {
+              session.messages = session.messages.concat();
+            });
+          },
+          onReasoningSummaryChunk(chunk) {
+            if (!chunk) return;
+            botMessage.reasoningSummary =
+              (botMessage.reasoningSummary ?? "") + chunk;
             get().updateTargetSession(session, (session) => {
               session.messages = session.messages.concat();
             });

@@ -45,6 +45,8 @@ import {
   getTimeoutMSByModel,
 } from "@/app/utils";
 import { fetch } from "@/app/utils/stream";
+import { getReasoningSummaryDelta } from "@/app/utils/reasoning-summary";
+import type { ReasoningDetail } from "@/app/utils/reasoning-summary";
 
 export interface OpenAIListModelResponse {
   object: string;
@@ -497,6 +499,7 @@ export class ChatGPTApi implements LLMApi {
           ...nativeWebSearchTools,
           ...(Array.isArray(pluginTools) ? pluginTools : []),
         ];
+        const reasoningSummaryState = new Map<string, string>();
         // console.log("getAsTools", pluginTools, funcs);
         streamWithThink(
           chatPath,
@@ -533,10 +536,16 @@ export class ChatGPTApi implements LLMApi {
                 tool_calls: ChatMessageTool[];
                 reasoning_content: string | null;
                 reasoning?: string | null;
+                reasoning_details?: ReasoningDetail[];
               };
             }>;
 
             if (!choices?.length) return { isThinking: false, content: "" };
+
+            const reasoningSummary = getReasoningSummaryDelta(
+              choices[0]?.delta?.reasoning_details,
+              reasoningSummaryState,
+            );
 
             const tool_calls = choices[0]?.delta?.tool_calls;
             if (tool_calls?.length > 0) {
@@ -571,6 +580,7 @@ export class ChatGPTApi implements LLMApi {
               return {
                 isThinking: false,
                 content: "",
+                reasoningSummary,
               };
             }
 
@@ -578,17 +588,20 @@ export class ChatGPTApi implements LLMApi {
               return {
                 isThinking: true,
                 content: reasoning,
+                reasoningSummary,
               };
             } else if (content && content.length > 0) {
               return {
                 isThinking: false,
                 content: content,
+                reasoningSummary,
               };
             }
 
             return {
               isThinking: false,
               content: "",
+              reasoningSummary,
             };
           },
           // processToolMessage, include tool_calls message and tool call results
@@ -599,6 +612,7 @@ export class ChatGPTApi implements LLMApi {
           ) => {
             // reset index value
             index = -1;
+            reasoningSummaryState.clear();
             // @ts-ignore
             requestPayload?.messages?.splice(
               // @ts-ignore
@@ -684,7 +698,17 @@ export class ChatGPTApi implements LLMApi {
         confirmedServiceTier = resJson.service_tier ?? confirmedServiceTier;
         firstTokenAt = firstTokenAt ?? Date.now();
         firstVisibleTokenAt = firstVisibleTokenAt ?? firstTokenAt;
+        const reasoningSummary = getReasoningSummaryDelta(
+          resJson.choices?.[0]?.message?.reasoning_details,
+          new Map<string, string>(),
+        );
+        if (reasoningSummary) {
+          options.onReasoningSummaryChunk?.(reasoningSummary);
+        }
         const message = await this.extractMessage(resJson);
+        if (typeof message === "string" && message.trim()) {
+          options.onVisibleText?.(message);
+        }
         logRequestMetrics();
         options.onFinish(message, res);
       }

@@ -1012,6 +1012,109 @@
   }
 }
 
+.chat-reasoning-summary {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 4px;
+  color: var(--text-secondary);
+}
+
+.chat-reasoning-summary-toggle {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    transform var(--motion-press) ease-out;
+
+  &:hover {
+    background: color-mix(in srgb, currentColor 8%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+.chat-reasoning-summary-chevron {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+.chat-reasoning-summary-chevron-collapsed {
+  transform: rotate(-90deg);
+}
+
+.chat-reasoning-summary-loading {
+  display: inline-flex;
+  align-items: center;
+  width: 30px;
+  height: 14px;
+
+  svg {
+    display: block;
+    width: 30px;
+    height: 14px;
+  }
+}
+
+.chat-reasoning-summary-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: 2px;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    grid-template-rows var(--motion-normal) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-out),
+    visibility var(--motion-fast) var(--ease-out);
+
+  > div {
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 4px 4px 24px;
+    border-left: 2px solid color-mix(in srgb, currentColor 24%, transparent);
+  }
+
+  :global(.markdown-body) {
+    color: inherit;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+}
+
+.chat-reasoning-summary-content-collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .chat-message-tools {
   font-size: 12px;
   color: #aaa;
@@ -1850,7 +1953,10 @@
   .chat-input,
   .chat-input-voice,
   .chat-intelligence-trigger,
-  .chat-intelligence-option {
+  .chat-intelligence-option,
+  .chat-reasoning-summary-toggle,
+  .chat-reasoning-summary-chevron,
+  .chat-reasoning-summary-content {
     transition: none;
   }
 

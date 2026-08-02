@@ -402,6 +402,7 @@ export function streamWithThink(
   ) => {
     isThinking: boolean;
     content: string | undefined;
+    reasoningSummary?: string;
   },
   processToolMessage: (
     requestPayload: any,
@@ -596,6 +597,9 @@ export function streamWithThink(
           options.onReasoningChunk?.(pendingLength);
         } else {
           remainText += pendingTaggedContent;
+          if (pendingTaggedContent.trim()) {
+            options.onVisibleText?.(pendingTaggedContent);
+          }
           options.onVisibleChunk?.(pendingLength);
         }
         pendingTaggedContent = "";
@@ -687,6 +691,9 @@ export function streamWithThink(
         options.onSseEvent?.();
         try {
           const chunk = parseSSE(text, runTools);
+          if (chunk?.reasoningSummary) {
+            options.onReasoningSummaryChunk?.(chunk.reasoningSummary);
+          }
           // Skip if content is empty
           if (!chunk?.content || chunk.content.length === 0) {
             return;
@@ -717,6 +724,9 @@ export function streamWithThink(
             return;
           }
 
+          if (chunk.content.trim()) {
+            options.onVisibleText?.(chunk.content);
+          }
           options.onVisibleChunk?.(chunk.content.length);
           isInThinkingMode = false;
           if (wasThinking) {
